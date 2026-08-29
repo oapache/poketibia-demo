@@ -359,27 +359,24 @@ function lockedTarget() {
 function tick(ts) {
   const target = lockedTarget();
 
-  // jogador anda sozinho ate ficar adjacente ao Oddish selvagem travado
-  // (evita entrar na tile que o Charmander esta ocupando)
-  if (!isMoving(state.player, ts)) {
-    if (target && dist(state.player, target) > 1) {
-      const step = stepToward(state.player, target, key(state.charmander.gx, state.charmander.gy));
-      if (step) startMove(state.player, step.nx, step.ny, ts);
+  // charmander vai DIRETO pro alvo assim que existe um (nao espera o jogador
+  // chegar - o Pokemon corre na frente, que e o pedido: ele deve chegar
+  // primeiro que o treinador). Sem alvo, fica parado esperando o jogador.
+  if (!isMoving(state.charmander, ts)) {
+    if (target && dist(state.charmander, target) > 1) {
+      const step = stepToward(state.charmander, target, key(state.player.gx, state.player.gy));
+      if (step) startMove(state.charmander, step.nx, step.ny, ts);
     }
   }
 
-  // charmander vai DIRETO pro alvo assim que existe um (nao espera o jogador
-  // chegar - o Pokemon corre na frente, que e o pedido: ele deve chegar
-  // primeiro que o treinador). Sem alvo, fica grudado ao lado do jogador.
-  // Nunca entra na tile que o jogador esta ocupando.
-  if (!isMoving(state.charmander, ts)) {
-    const avoidPlayer = key(state.player.gx, state.player.gy);
-    if (target && dist(state.charmander, target) > 1) {
-      const step = stepToward(state.charmander, target, avoidPlayer);
-      if (step) startMove(state.charmander, step.nx, step.ny, ts);
-    } else if (!target && dist(state.charmander, state.player) > 1) {
-      const step = stepToward(state.charmander, state.player, avoidPlayer);
-      if (step) startMove(state.charmander, step.nx, step.ny, ts);
+  // quem esta CACANDO e o Charmander, entao o treinador segue O CHARMANDER
+  // (nao o alvo direto) - antes o jogador calculava rota propria pro
+  // selvagem, o que fazia ele e o Charmander seguirem caminhos diferentes
+  // e as vezes competirem pela mesma tile.
+  if (!isMoving(state.player, ts)) {
+    if (dist(state.player, state.charmander) > 1) {
+      const step = stepToward(state.player, state.charmander, key(state.charmander.gx, state.charmander.gy));
+      if (step) startMove(state.player, step.nx, step.ny, ts);
     }
   }
 

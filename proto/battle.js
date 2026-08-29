@@ -50,6 +50,14 @@ let mapData, tilesByKey = new Map(), collisionSet = new Set(), offsets = { disp:
 let mapItemsIndex = {};
 let flatSet = new Set(), topSet = new Set();
 function layerOf(id) {
+  // objeto ALTO (>1 tile) nunca pode ser "flat" (sempre embaixo, sem sort) -
+  // fisicamente nao faz sentido pra uma arvore inteira, so pra decal rente ao
+  // chao. 70 arvores grandes no mapa oddish estao classificadas onbottom/
+  // borders no draworder.json (categoria do JOGO, nao nossa) e isso fazia o
+  // personagem andar por cima delas sempre, direto a causa do bug reportado.
+  const entry = mapItemsIndex[String(id)];
+  const isTall = (entry?.height || TILE) > TILE;
+  if (isTall) return 'sorted';
   if (flatSet.has(id)) return 'flat';
   if (topSet.has(id)) return 'top';
   return 'sorted';
@@ -495,12 +503,22 @@ function draw() {
       const entry = mapItemsIndex[String(id)];
       return Math.max(1, Math.round((entry?.height || TILE) / TILE));
     }
+    // chave de profundidade = linha da BASE visual do sprite, considerando
+    // altura (rowSpanOf) E deslocamento vertical (offsets.disp.y). 159 tiles
+    // usam disp.y grande (ate -32px, 1 tile inteira) pra empurrar o sprite
+    // pra cima na tela sem mudar sua linha nos dados - ignorar isso deixava
+    // decoracao "flutuando" fora do lugar no sort, causando personagem
+    // aparecendo na frente de arvore que devia estar atras.
+    function depthKeyOf(id, y) {
+      const dispY = offsets.disp?.[String(id)]?.[1] || 0;
+      return y + dispY / TILE + rowSpanOf(id) - 1;
+    }
     // a maioria do chao e 32x32 (ordem entre eles nao importa), mas ~28
     // tiles de agua/borda sao 64x64 - se desenhados em qualquer ordem podem
     // cortar o chao vizinho. Ordena pela linha da BASE (mesmo truque usado
     // pra decoracao grande) so quando ha sprite >1 tile de altura por perto.
     const groundItems = visible.map(([x, y, t]) => ({
-      y: y + rowSpanOf(t.ground) - 1,
+      y: depthKeyOf(t.ground, y),
       draw: () => drawExtra(t.ground, Math.round(originX + x * TILE), Math.round(originY + y * TILE)),
     }));
     groundItems.sort((a, b) => a.y - b.y);
@@ -528,7 +546,7 @@ function draw() {
         // tiles de altura), ancorado no topo-esquerda. Se ordenar so pela
         // linha da ancora, uma entidade na linha de baixo (onde a arvore
         // "termina" visualmente) fica errada. Usa a linha da BASE do sprite.
-        depthItems.push({ y: y + rowSpanOf(id) - 1, draw: () => drawExtra(id, px, py) });
+        depthItems.push({ y: depthKeyOf(id, y), draw: () => drawExtra(id, px, py) });
       }
     }
     const FAINT_DUR = 5000; // combina com o setTimeout do respawn

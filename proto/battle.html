@@ -31,6 +31,20 @@
   }
   .panel-title:active { cursor: grabbing; }
   .panel-body { padding: 4px; }
+  .panel.minimized .panel-body { display: none; }
+  .panel-btn {
+    background: #3a3a3a;
+    border: 1px solid #555;
+    color: #eee;
+    font: bold 11px monospace;
+    width: 18px; height: 18px;
+    line-height: 16px;
+    text-align: center;
+    padding: 0;
+    cursor: pointer;
+    border-radius: 3px;
+  }
+  .panel-btn:hover { background: #4a4a4a; }
 </style>
 </head>
 <body>
@@ -39,6 +53,7 @@
 <div class="panel" id="panel-minimap" style="top:12px; right:12px; width:180px;">
   <div class="panel-title" data-drag-handle>
     <span>Minimapa</span>
+    <button class="panel-btn" data-minimize-btn title="Minimizar">-</button>
   </div>
   <div class="panel-body">
     <canvas id="minimap-canvas" width="168" height="168" style="display:block; image-rendering: pixelated;"></canvas>

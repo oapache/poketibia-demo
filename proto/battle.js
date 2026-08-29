@@ -785,6 +785,22 @@ function makeDraggable(panel) {
 }
 document.querySelectorAll('.panel').forEach(makeDraggable);
 
+// botao de minimizar: colapsa o panel-body, estado tambem persistido
+function setupMinimize(panel) {
+  const btn = panel.querySelector('[data-minimize-btn]');
+  if (!btn) return;
+  const storeKey = 'panelMin:' + panel.id;
+  if (localStorage.getItem(storeKey) === '1') panel.classList.add('minimized');
+  btn.addEventListener('mousedown', e => e.stopPropagation()); // nao inicia o drag
+  btn.addEventListener('click', () => {
+    const min = panel.classList.toggle('minimized');
+    localStorage.setItem(storeKey, min ? '1' : '0');
+    btn.textContent = min ? '+' : '-';
+  });
+  if (panel.classList.contains('minimized')) btn.textContent = '+';
+}
+document.querySelectorAll('.panel').forEach(setupMinimize);
+
 // minimapa: escala a area da hunt (huntBounds) pro tamanho do canvas do
 // painel, plota jogador/Charmander/selvagens como pontinhos.
 function drawMinimap() {

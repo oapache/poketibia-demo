@@ -1,0 +1,218 @@
+{
+ "/assets/outfits/male/159/1_1_1_1.png": {
+  "width": 32,
+  "height": 32,
+  "frameCount": 1,
+  "frameDurationMs": 150,
+  "files": [
+   "1_1_1_1.png"
+  ]
+ },
+ "/assets/outfits/male/159/1_1_1_1_template.png": {
+  "width": 32,
+  "height": 32,
+  "frameCount": 1,
+  "frameDurationMs": 150,
+  "files": [
+   "1_1_1_1_template.png"
+  ]
+ },
+ "/assets/outfits/male/159/2_1_1_1.png": {
+  "width": 32,
+  "height": 32,
+  "frameCount": 1,
+  "frameDurationMs": 150,
+  "files": [
+   "2_1_1_1.png"
+  ]
+ },
+ "/assets/outfits/male/159/2_1_1_1_template.png": {
+  "width": 32,
+  "height": 32,
+  "frameCount": 1,
+  "frameDurationMs": 150,
+  "files": [
+   "2_1_1_1_template.png"
+  ]
+ },
+ "/assets/outfits/male/159/3_1_1_1.png": {
+  "width": 32,
+  "height": 32,
+  "frameCount": 1,
+  "frameDurationMs": 150,
+  "files": [
+   "3_1_1_1.png"
+  ]
+ },
+ "/assets/outfits/male/159/3_1_1_1_template.png": {
+  "width": 32,
+  "height": 32,
+  "frameCount": 1,
+  "frameDurationMs": 150,
+  "files": [
+   "3_1_1_1_template.png"
+  ]
+ },
+ "/assets/outfits/male/159/1_1_1_2.png": {
+  "width": 32,
+  "height": 32,
+  "frameCount": 1,
+  "frameDurationMs": 150,
+  "files": [
+   "1_1_1_2.png"
+  ]
+ },
+ "/assets/outfits/male/159/1_1_1_2_template.png": {
+  "width": 32,
+  "height": 32,
+  "frameCount": 1,
+  "frameDurationMs": 150,
+  "files": [
+   "1_1_1_2_template.png"
+  ]
+ },
+ "/assets/outfits/male/159/2_1_1_2.png": {
+  "width": 32,
+  "height": 32,
+  "frameCount": 1,
+  "frameDurationMs": 150,
+  "files": [
+   "2_1_1_2.png"
+  ]
+ },
+ "/assets/outfits/male/159/2_1_1_2_template.png": {
+  "width": 32,
+  "height": 32,
+  "frameCount": 1,
+  "frameDurationMs": 150,
+  "files": [
+   "2_1_1_2_template.png"
+  ]
+ },
+ "/assets/outfits/male/159/3_1_1_2.png": {
+  "width": 32,
+  "height": 32,
+  "frameCount": 1,
+  "frameDurationMs": 150,
+  "files": [
+   "3_1_1_2.png"
+  ]
+ },
+ "/assets/outfits/male/159/3_1_1_2_template.png": {
+  "width": 32,
+  "height": 32,
+  "frameCount": 1,
+  "frameDurationMs": 150,
+  "files": [
+   "3_1_1_2_template.png"
+  ]
+ },
+ "/assets/outfits/male/159/1_1_1_3.png": {
+  "width": 32,
+  "height": 32,
+  "frameCount": 1,
+  "frameDurationMs": 150,
+  "files": [
+   "1_1_1_3.png"
+  ]
+ },
+ "/assets/outfits/male/159/1_1_1_3_template.png": {
+  "width": 32,
+  "height": 32,
+  "frameCount": 1,
+  "frameDurationMs": 150,
+  "files": [
+   "1_1_1_3_template.png"
+  ]
+ },
+ "/assets/outfits/male/159/2_1_1_3.png": {
+  "width": 32,
+  "height": 32,
+  "frameCount": 1,
+  "frameDurationMs": 150,
+  "files": [
+   "2_1_1_3.png"
+  ]
+ },
+ "/assets/outfits/male/159/2_1_1_3_template.png": {
+  "width": 32,
+  "height": 32,
+  "frameCount": 1,
+  "frameDurationMs": 150,
+  "files": [
+   "2_1_1_3_template.png"
+  ]
+ },
+ "/assets/outfits/male/159/3_1_1_3.png": {
+  "width": 32,
+  "height": 32,
+  "frameCount": 1,
+  "frameDurationMs": 150,
+  "files": [
+   "3_1_1_3.png"
+  ]
+ },
+ "/assets/outfits/male/159/3_1_1_3_template.png": {
+  "width": 32,
+  "height": 32,
+  "frameCount": 1,
+  "frameDurationMs": 150,
+  "files": [
+   "3_1_1_3_template.png"
+  ]
+ },
+ "/assets/outfits/male/159/1_1_1_4.png": {
+  "width": 32,
+  "height": 32,
+  "frameCount": 1,
+  "frameDurationMs": 150,
+  "files": [
+   "1_1_1_4.png"
+  ]
+ },
+ "/assets/outfits/male/159/1_1_1_4_template.png": {
+  "width": 32,
+  "height": 32,
+  "frameCount": 1,
+  "frameDurationMs": 150,
+  "files": [
+   "1_1_1_4_template.png"
+  ]
+ },
+ "/assets/outfits/male/159/2_1_1_4.png": {
+  "width": 32,
+  "height": 32,
+  "frameCount": 1,
+  "frameDurationMs": 150,
+  "files": [
+   "2_1_1_4.png"
+  ]
+ },
+ "/assets/outfits/male/159/2_1_1_4_template.png": {
+  "width": 32,
+  "height": 32,
+  "frameCount": 1,
+  "frameDurationMs": 150,
+  "files": [
+   "2_1_1_4_template.png"
+  ]
+ },
+ "/assets/outfits/male/159/3_1_1_4.png": {
+  "width": 32,
+  "height": 32,
+  "frameCount": 1,
+  "frameDurationMs": 150,
+  "files": [
+   "3_1_1_4.png"
+  ]
+ },
+ "/assets/outfits/male/159/3_1_1_4_template.png": {
+  "width": 32,
+  "height": 32,
+  "frameCount": 1,
+  "frameDurationMs": 150,
+  "files": [
+   "3_1_1_4_template.png"
+  ]
+ }
+}

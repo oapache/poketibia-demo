@@ -747,3 +747,71 @@ function draw() {
 }
 
 init().catch(e => { log('ERRO: ' + e.message); console.error(e); });
+
+// ---- paineis modulares (arrastaveis, posicao salva) ----
+// base reusavel: qualquer .panel com um filho [data-drag-handle] vira
+// arrastavel e lembra onde o usuario deixou (localStorage), sobrevive a
+// reload. Primeiro painel: minimapa; inventario/pokebag entram depois
+// reusando a mesma funcao.
+function makeDraggable(panel) {
+  const handle = panel.querySelector('[data-drag-handle]');
+  const storeKey = 'panelPos:' + panel.id;
+  const saved = JSON.parse(localStorage.getItem(storeKey) || 'null');
+  if (saved) {
+    panel.style.left = saved.left; panel.style.top = saved.top;
+    panel.style.right = ''; panel.style.bottom = '';
+  }
+  let dragging = false, offX = 0, offY = 0;
+  handle.addEventListener('mousedown', e => {
+    dragging = true;
+    const rect = panel.getBoundingClientRect();
+    offX = e.clientX - rect.left; offY = e.clientY - rect.top;
+    e.preventDefault();
+  });
+  window.addEventListener('mousemove', e => {
+    if (!dragging) return;
+    const maxLeft = window.innerWidth - panel.offsetWidth;
+    const maxTop = window.innerHeight - panel.offsetHeight;
+    const x = Math.max(0, Math.min(maxLeft, e.clientX - offX));
+    const y = Math.max(0, Math.min(maxTop, e.clientY - offY));
+    panel.style.left = x + 'px'; panel.style.top = y + 'px';
+    panel.style.right = ''; panel.style.bottom = '';
+  });
+  window.addEventListener('mouseup', () => {
+    if (!dragging) return;
+    dragging = false;
+    localStorage.setItem(storeKey, JSON.stringify({ left: panel.style.left, top: panel.style.top }));
+  });
+}
+document.querySelectorAll('.panel').forEach(makeDraggable);
+
+// minimapa: escala a area da hunt (huntBounds) pro tamanho do canvas do
+// painel, plota jogador/Charmander/selvagens como pontinhos.
+function drawMinimap() {
+  const canvas = document.getElementById('minimap-canvas');
+  if (!canvas || !state.player || !isFinite(huntBounds.minX)) return;
+  const mctx = canvas.getContext('2d');
+  mctx.fillStyle = '#0a2410';
+  mctx.fillRect(0, 0, canvas.width, canvas.height);
+  const w = huntBounds.maxX - huntBounds.minX, h = huntBounds.maxY - huntBounds.minY;
+  const scale = Math.min(canvas.width / w, canvas.height / h);
+  const toPx = (gx, gy) => [(gx - huntBounds.minX) * scale, (gy - huntBounds.minY) * scale];
+
+  for (const w2 of state.wilds) {
+    if (!w2.alive) continue;
+    const [x, y] = toPx(w2.gx, w2.gy);
+    mctx.fillStyle = w2 === state.huntTarget ? '#ffe14d' : '#ff8a8a';
+    mctx.fillRect(x - 1, y - 1, 3, 3);
+  }
+  {
+    const [x, y] = toPx(state.charmander.gx, state.charmander.gy);
+    mctx.fillStyle = '#ff7a1f';
+    mctx.fillRect(x - 1, y - 1, 3, 3);
+  }
+  {
+    const [x, y] = toPx(state.player.gx, state.player.gy);
+    mctx.fillStyle = '#4fc3ff';
+    mctx.beginPath(); mctx.arc(x, y, 2, 0, Math.PI * 2); mctx.fill();
+  }
+}
+setInterval(drawMinimap, 200);

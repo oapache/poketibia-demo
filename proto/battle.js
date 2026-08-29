@@ -83,6 +83,9 @@ function terrainSprite(tileId) {
   if (!e?.files?.length) return null;
   return loadImage(`${SPRITES}/map-items/${e.files[0]}`);
 }
+function typeIcon(type) {
+  return loadImage(`${DATA}/assets/types/${type.toLowerCase()}.png`);
+}
 // "elev" = mecanismo classico de escada/plataforma: um item elevado empurra
 // pra cima (na tela) tudo que fica em cima dele na mesma tile - inclusive
 // quem esta em pe ali. Sem isso, andar por cima de uma "escada" no dado do
@@ -314,9 +317,12 @@ async function init() {
   });
 
   state.charmander = Object.assign(makeEntity(start.x, start.y), {
-    hp: charmData.baseHp, maxHp: charmData.baseHp, data: charmData,
+    hp: charmData.baseHp, maxHp: charmData.baseHp, data: charmData, level: 1,
     spriteIdx: await loadCreatureIndex(charmData.looktype), lastAttack: 0, cooldownMs: 1200,
   });
+  // icones de tipo elemental (fire.png, normal.png...) pra hotbar de poderes
+  const attackTypes = [...new Set(charmData.attacks.map(a => a.type.toLowerCase()))];
+  for (const t of attackTypes) typeIcon(t);
 
   // posicoes aleatorias em tile livre (nao usa mais huntConfig.spawns fixo)
   const WILD_COUNT = Math.min(15, huntConfig?.spawns?.length || 15);
@@ -457,6 +463,72 @@ function drawFloatingTexts(originX, originY, now) {
     ctx.textAlign = 'left';
     ctx.globalAlpha = 1;
   }
+}
+
+// hotbar de poderes do Charmander, estilo barra de skill (icone de tipo +
+// numero + cooldown). Fica em coordenada de TELA fixa (fora do ctx.scale do
+// ZOOM), centralizada embaixo. So o slot 0 (Fire Fang) e o que a IA de
+// combate realmente usa agora - os outros mostram "bloqueado" ate o nivel
+// de aprendizado (learnLevel), preparado pra quando tiver progressao de verdade.
+const SLOT = 46, GAP = 6;
+function drawHotbar(now) {
+  const charm = state.charmander;
+  if (!charm?.data) return;
+  const attacks = charm.data.attacks;
+  const totalW = attacks.length * SLOT + (attacks.length - 1) * GAP;
+  const startX = Math.round((viewW - totalW) / 2);
+  const y = viewH - SLOT - 18;
+
+  attacks.forEach((atk, i) => {
+    const x = startX + i * (SLOT + GAP);
+    const locked = atk.learnLevel > (charm.level || 1);
+
+    ctx.fillStyle = locked ? 'rgba(20,20,20,0.85)' : 'rgba(20,20,20,0.65)';
+    ctx.strokeStyle = '#000';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.roundRect(x, y, SLOT, SLOT, 6);
+    ctx.fill(); ctx.stroke();
+
+    const icon = typeIcon(atk.type);
+    if (icon?.complete && icon.naturalWidth) {
+      ctx.globalAlpha = locked ? 0.35 : 1;
+      ctx.drawImage(icon, x + 5, y + 5, SLOT - 10, SLOT - 10);
+      ctx.globalAlpha = 1;
+    }
+
+    if (locked) {
+      ctx.font = 'bold 11px monospace';
+      ctx.textAlign = 'center';
+      ctx.fillStyle = '#fff';
+      ctx.lineWidth = 3; ctx.strokeStyle = '#000';
+      ctx.strokeText(`Lv${atk.learnLevel}`, x + SLOT / 2, y + SLOT / 2 + 4);
+      ctx.fillText(`Lv${atk.learnLevel}`, x + SLOT / 2, y + SLOT / 2 + 4);
+      ctx.textAlign = 'left';
+    } else if (i === 0) {
+      // unico poder realmente disparado pela IA de combate agora - mostra
+      // cooldown de verdade
+      const remain = Math.max(0, atk.cooldownMs - (now - charm.lastAttack));
+      if (remain > 0) {
+        const frac = remain / atk.cooldownMs;
+        ctx.fillStyle = 'rgba(0,0,0,0.6)';
+        ctx.fillRect(x, y + SLOT * (1 - frac), SLOT, SLOT * frac);
+        ctx.font = 'bold 13px monospace';
+        ctx.textAlign = 'center';
+        ctx.fillStyle = '#fff';
+        ctx.lineWidth = 3; ctx.strokeStyle = '#000';
+        const secs = (remain / 1000).toFixed(1);
+        ctx.strokeText(secs, x + SLOT / 2, y + SLOT / 2 + 5);
+        ctx.fillText(secs, x + SLOT / 2, y + SLOT / 2 + 5);
+        ctx.textAlign = 'left';
+      }
+    }
+
+    // numero do slot (estilo hotbar classico)
+    ctx.font = 'bold 10px monospace';
+    ctx.fillStyle = '#ccc';
+    ctx.fillText(String(i + 1), x + 3, y + SLOT - 3);
+  });
 }
 
 function drawHpBar(px, py, hp, maxHp) {
@@ -643,6 +715,7 @@ function draw() {
 
     drawFloatingTexts(originX, originY, now);
     ctx.restore();
+    drawHotbar(now); // coordenada de tela fixa, fora do zoom do mapa
   }
   requestAnimationFrame(draw);
 }

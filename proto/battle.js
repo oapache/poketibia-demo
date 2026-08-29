@@ -11,8 +11,8 @@ const BASE = new URL('..', location.href).pathname.replace(/\/$/, '');
 const SPRITES = `${BASE}/sprites-test`;
 const DATA = `${BASE}/downloaded`;
 const MAP_SLUG = 'oddish'; // mapa que ja tem hunt-config com spawn de Oddish
-const PLAYER_MOVE_DUR = 500; // ms por passo do jogador (mais devagar)
-const CREATURE_MOVE_DUR = 480; // ms por passo de Pokemon (Charmander/selvagens)
+const PLAYER_MOVE_DUR = 750; // ms por passo do jogador (mais devagar - velocidade anterior cansava de assistir)
+const CREATURE_MOVE_DUR = 700; // ms por passo de Pokemon (Charmander/selvagens)
 const ZOOM = 1.3; // camera parecida com o client real (1.8 deixava personagem/Pokemon grande demais)
 
 const canvas = document.getElementById('c');
@@ -49,6 +49,11 @@ function log(msg) {
 let mapData, tilesByKey = new Map(), collisionSet = new Set(), offsets = { disp: {} };
 let mapItemsIndex = {};
 let fallbackGroundId; // grama base repetida fora da area carregada (ver init())
+// limites da zona da hunt (bounding box dos spawns originais + margem) -
+// wander/fuga tem que respeitar isso, senao Oddish foge sem parar e some do
+// mapa pra sempre com o Charmander perseguindo atras ("mete o pe e nunca
+// mais aparece").
+let huntBounds = { minX: -Infinity, maxX: Infinity, minY: -Infinity, maxY: Infinity };
 let flatSet = new Set(), topSet = new Set();
 function layerOf(id) {
   // objeto ALTO (>1 tile) nunca pode ser "flat" (sempre embaixo, sem sort) -
@@ -188,19 +193,22 @@ function stepToward(from, to, avoidKey) {
 // passo pra LONGE de um perseguidor (foge) - mesma ideia do stepToward, so
 // que maximiza distancia em vez de minimizar. Evita voltar pra tile de onde
 // acabou de vir (senao entra num ping-pong A<->B infinito - o "dando ole").
+function inHuntBounds(x, y) {
+  return x >= huntBounds.minX && x <= huntBounds.maxX && y >= huntBounds.minY && y <= huntBounds.maxY;
+}
 function fleeStep(from, from_threat) {
   let best = null, bestDist = -Infinity;
   for (const [dx, dy] of NEIGHBORS8) {
     const nx = from.gx + dx, ny = from.gy + dy;
     if (nx === from.fromX && ny === from.fromY) continue;
-    if (isBlocked(nx, ny)) continue;
+    if (isBlocked(nx, ny) || !inHuntBounds(nx, ny)) continue;
     const d = Math.abs(from_threat.gx - nx) + Math.abs(from_threat.gy - ny);
     if (d > bestDist) { bestDist = d; best = { nx, ny }; }
   }
   if (!best) { // sem opcao alem de voltar - melhor voltar que travar parado
     for (const [dx, dy] of NEIGHBORS8) {
       const nx = from.gx + dx, ny = from.gy + dy;
-      if (isBlocked(nx, ny)) continue;
+      if (isBlocked(nx, ny) || !inHuntBounds(nx, ny)) continue;
       const d = Math.abs(from_threat.gx - nx) + Math.abs(from_threat.gy - ny);
       if (d > bestDist) { bestDist = d; best = { nx, ny }; }
     }
@@ -208,7 +216,7 @@ function fleeStep(from, from_threat) {
   return best;
 }
 function randomStep(from) {
-  const opts = NEIGHBORS8.filter(([dx, dy]) => !isBlocked(from.gx + dx, from.gy + dy));
+  const opts = NEIGHBORS8.filter(([dx, dy]) => !isBlocked(from.gx + dx, from.gy + dy) && inHuntBounds(from.gx + dx, from.gy + dy));
   if (!opts.length) return null;
   const [dx, dy] = opts[Math.floor(Math.random() * opts.length)];
   return { nx: from.gx + dx, ny: from.gy + dy };
@@ -278,16 +286,17 @@ async function init() {
   // beirada do mapa carregado, onde da pra ver o "fim do mundo" (vazio preto
   // além da area de tiles que a hunt realmente usa).
   const HUNT_MARGIN = 12;
-  let boundsMinX = -Infinity, boundsMaxX = Infinity, boundsMinY = -Infinity, boundsMaxY = Infinity;
   if (huntConfig?.spawns?.length) {
     const xs = huntConfig.spawns.map(s => s.x), ys = huntConfig.spawns.map(s => s.y);
-    boundsMinX = Math.min(...xs) - HUNT_MARGIN; boundsMaxX = Math.max(...xs) + HUNT_MARGIN;
-    boundsMinY = Math.min(...ys) - HUNT_MARGIN; boundsMaxY = Math.max(...ys) + HUNT_MARGIN;
+    huntBounds = {
+      minX: Math.min(...xs) - HUNT_MARGIN, maxX: Math.max(...xs) + HUNT_MARGIN,
+      minY: Math.min(...ys) - HUNT_MARGIN, maxY: Math.max(...ys) + HUNT_MARGIN,
+    };
   }
   const walkableTiles = [];
   for (const [k] of tilesByKey) {
     const [x, y] = k.split(',').map(Number);
-    if (x < boundsMinX || x > boundsMaxX || y < boundsMinY || y > boundsMaxY) continue;
+    if (x < huntBounds.minX || x > huntBounds.maxX || y < huntBounds.minY || y > huntBounds.maxY) continue;
     if (!isBlocked(x, y)) walkableTiles.push({ x, y });
   }
   function randomWalkableTile() {

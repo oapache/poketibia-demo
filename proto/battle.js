@@ -126,7 +126,7 @@ function walkFrame(e, now) {
 // BFS de verdade: contorna qualquer obstaculo (parede em U, etc), nao so o
 // caso de 1 pedra isolada. Delimitado a uma caixa em torno de origem/destino
 // pra nao varrer o mapa inteiro a cada passo.
-function bfsPath(fromGx, fromGy, toGx, toGy) {
+function bfsPath(fromGx, fromGy, toGx, toGy, avoidKey) {
   const margin = 20;
   const minX = Math.min(fromGx, toGx) - margin, maxX = Math.max(fromGx, toGx) + margin;
   const minY = Math.min(fromGy, toGy) - margin, maxY = Math.max(fromGy, toGy) + margin;
@@ -145,7 +145,7 @@ function bfsPath(fromGx, fromGy, toGx, toGy) {
       const k = nx + ',' + ny;
       if (cameFrom.has(k)) continue;
       const isGoal = nx === toGx && ny === toGy;
-      if (!isGoal && isBlocked(nx, ny)) continue;
+      if (!isGoal && (isBlocked(nx, ny) || k === avoidKey)) continue;
       cameFrom.set(k, cx + ',' + cy);
       queue.push([nx, ny]);
     }
@@ -163,12 +163,31 @@ function bfsPath(fromGx, fromGy, toGx, toGy) {
 }
 // recalcula o caminho (barato o bastante pra rodar a cada passo, o terreno
 // e estatico) e devolve so o proximo passo; para quando ja fica adjacente.
-function stepToward(from, to) {
+function stepToward(from, to, avoidKey) {
   if (Math.max(Math.abs(to.gx - from.gx), Math.abs(to.gy - from.gy)) <= 1) return null;
-  const path = bfsPath(from.gx, from.gy, to.gx, to.gy);
+  const path = bfsPath(from.gx, from.gy, to.gx, to.gy, avoidKey);
   if (!path || path.length === 0) return null;
   return { nx: path[0].x, ny: path[0].y };
 }
+// passo pra LONGE de um perseguidor (foge) - mesma ideia do stepToward, so
+// que maximiza distancia em vez de minimizar.
+function fleeStep(from, from_threat) {
+  let best = null, bestDist = -Infinity;
+  for (const [dx, dy] of NEIGHBORS8) {
+    const nx = from.gx + dx, ny = from.gy + dy;
+    if (isBlocked(nx, ny)) continue;
+    const d = Math.abs(from_threat.gx - nx) + Math.abs(from_threat.gy - ny);
+    if (d > bestDist) { bestDist = d; best = { nx, ny }; }
+  }
+  return best;
+}
+function randomStep(from) {
+  const opts = NEIGHBORS8.filter(([dx, dy]) => !isBlocked(from.gx + dx, from.gy + dy));
+  if (!opts.length) return null;
+  const [dx, dy] = opts[Math.floor(Math.random() * opts.length)];
+  return { nx: from.gx + dx, ny: from.gy + dy };
+}
+const NEIGHBORS8 = [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [1, -1], [-1, 1], [-1, -1]];
 function dirFromDelta(dx, dy) {
   if (dx > 0) return 2; // direita - confirmado certo
   if (dx < 0) return 4; // esquerda
@@ -294,9 +313,10 @@ function tick(ts) {
   const target = lockedTarget();
 
   // jogador anda sozinho ate ficar adjacente ao Oddish selvagem travado
+  // (evita entrar na tile que o Charmander esta ocupando)
   if (!isMoving(state.player, ts)) {
     if (target && dist(state.player, target) > 1) {
-      const step = stepToward(state.player, target);
+      const step = stepToward(state.player, target, key(state.charmander.gx, state.charmander.gy));
       if (step) startMove(state.player, step.nx, step.ny, ts);
     }
   }
@@ -304,15 +324,36 @@ function tick(ts) {
   // charmander vai DIRETO pro alvo assim que existe um (nao espera o jogador
   // chegar - o Pokemon corre na frente, que e o pedido: ele deve chegar
   // primeiro que o treinador). Sem alvo, fica grudado ao lado do jogador.
+  // Nunca entra na tile que o jogador esta ocupando.
   if (!isMoving(state.charmander, ts)) {
+    const avoidPlayer = key(state.player.gx, state.player.gy);
     if (target && dist(state.charmander, target) > 1) {
-      const step = stepToward(state.charmander, target);
+      const step = stepToward(state.charmander, target, avoidPlayer);
       if (step) startMove(state.charmander, step.nx, step.ny, ts);
     } else if (!target && dist(state.charmander, state.player) > 1) {
-      const step = stepToward(state.charmander, state.player);
-      if (step && !(step.nx === state.player.gx && step.ny === state.player.gy)) {
-        startMove(state.charmander, step.nx, step.ny, ts);
+      const step = stepToward(state.charmander, state.player, avoidPlayer);
+      if (step) startMove(state.charmander, step.nx, step.ny, ts);
+    }
+  }
+
+  // Oddish selvagem NAO fica parado: o alvo TRAVADO (o que o Charmander esta
+  // perseguindo) e agressivo e avanca pra brigar; todos os OUTROS (nao-alvo)
+  // fogem quando o Charmander chega perto - um de cada vez apanha, o resto
+  // se espalha. Longe de tudo, vagueia a esmo.
+  for (const w of state.wilds) {
+    if (!w.alive || isMoving(w, ts)) continue;
+    const dToCharm = dist(w, state.charmander);
+    if (w === target) {
+      if (dToCharm > 1) {
+        const step = stepToward(w, state.charmander);
+        if (step) startMove(w, step.nx, step.ny, ts);
       }
+    } else if (dToCharm <= 4) {
+      const step = fleeStep(w, state.charmander);
+      if (step) startMove(w, step.nx, step.ny, ts);
+    } else if (Math.random() < 0.15) {
+      const step = randomStep(w);
+      if (step) startMove(w, step.nx, step.ny, ts);
     }
   }
 

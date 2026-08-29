@@ -13,7 +13,8 @@ const DATA = `${BASE}/downloaded`;
 const MAP_SLUG = 'oddish'; // mapa que ja tem hunt-config com spawn de Oddish
 const PLAYER_MOVE_DUR = 750; // ms por passo do jogador (mais devagar - velocidade anterior cansava de assistir)
 const CREATURE_MOVE_DUR = 700; // ms por passo de Pokemon (Charmander/selvagens)
-const ZOOM = 1.3; // camera parecida com o client real (1.8 deixava personagem/Pokemon grande demais)
+const ZOOM_DEFAULT = 1.3; // camera parecida com o client real (1.8 deixava personagem/Pokemon grande demais)
+let ZOOM = Number(localStorage.getItem('settings:zoom')) || ZOOM_DEFAULT;
 
 const canvas = document.getElementById('c');
 const ctx = canvas.getContext('2d');
@@ -783,7 +784,7 @@ function makeDraggable(panel) {
     localStorage.setItem(storeKey, JSON.stringify({ left: panel.style.left, top: panel.style.top }));
   });
 }
-document.querySelectorAll('.panel').forEach(makeDraggable);
+document.querySelectorAll('.panel:not(.fixed-in-stack)').forEach(makeDraggable);
 
 // botao de minimizar: colapsa o panel-body, estado tambem persistido
 function setupMinimize(panel) {
@@ -801,11 +802,123 @@ function setupMinimize(panel) {
 }
 document.querySelectorAll('.panel').forEach(setupMinimize);
 
+// ---- painel de time (trocavel) ----
+// cada entrada guarda os proprios dados/sprite; trocar de ativo so troca o
+// que o state.charmander representa (posicao/IA continuam as mesmas, so a
+// "casca" - especie, hp, sprite - muda pro Pokemon selecionado).
+let partyRoster = [];
+async function setupParty() {
+  const creatures = await fetch(`${DATA}/game/creatures.json`).then(r => r.json());
+  const names = ['Umbreon', 'Dragonite', 'Charmander'];
+  partyRoster = [];
+  for (const name of names) {
+    const data = creatures.creatures.find(c => c.name === name);
+    if (!data) continue;
+    const spriteIdx = await loadCreatureIndex(data.looktype);
+    partyRoster.push({ name, data, spriteIdx, hp: data.baseHp, maxHp: data.baseHp });
+  }
+  const activeIdx = partyRoster.findIndex(p => p.name === 'Charmander');
+  renderParty(activeIdx >= 0 ? activeIdx : 0);
+}
+function renderParty(activeIdx) {
+  const el = document.getElementById('party-list');
+  el.innerHTML = '';
+  partyRoster.forEach((p, i) => {
+    const isActive = i === activeIdx;
+    if (isActive) { p.hp = state.charmander.hp; p.maxHp = state.charmander.maxHp; }
+    const row = document.createElement('div');
+    row.className = 'party-row' + (isActive ? ' active' : '');
+    const img = creatureSprite(p.spriteIdx, p.data.looktype, 1, 3);
+    row.innerHTML = `
+      <div class="party-portrait"><img src="${img.src}"></div>
+      <div class="party-info">
+        <div class="party-name">${p.name}</div>
+        <div class="party-hpbar"><div class="party-hpbar-fill" style="width:${Math.max(0, p.hp / p.maxHp * 100)}%"></div></div>
+      </div>`;
+    row.addEventListener('click', () => switchActivePokemon(i));
+    el.appendChild(row);
+  });
+}
+function switchActivePokemon(idx) {
+  const p = partyRoster[idx];
+  if (!p || !state.charmander) return;
+  // guarda o HP atual do que estava ativo antes de trocar
+  const prevActive = partyRoster.find(x => x.data === state.charmander.data);
+  if (prevActive) { prevActive.hp = state.charmander.hp; prevActive.maxHp = state.charmander.maxHp; }
+  Object.assign(state.charmander, {
+    data: p.data, spriteIdx: p.spriteIdx, hp: p.hp, maxHp: p.maxHp, level: 1, lastAttack: 0,
+  });
+  renderParty(idx);
+}
+setupParty();
+
+// ---- Mochila (itens comuns) e PokeBag (pokebolas - estoque infinito) ----
+// dados de exemplo (ainda nao ha economia/drop real implementado) so pra
+// validar o layout de grade de itens com contador empilhado.
+function renderItemGrid(elId, entries) {
+  const el = document.getElementById(elId);
+  el.innerHTML = '';
+  for (const { icon, count } of entries) {
+    const slot = document.createElement('div');
+    slot.className = 'item-slot';
+    slot.innerHTML = `<img src="${icon}"><span class="item-count">${count}</span>`;
+    el.appendChild(slot);
+  }
+}
+renderItemGrid('mochila-grid', [
+  { icon: `${DATA}/assets/items/seed.png`, count: 373 },
+  { icon: `${DATA}/assets/items/bottles_of_poison.png`, count: 45 },
+  { icon: `${DATA}/assets/items/bag_of_pollen.png`, count: 135 },
+  { icon: `${DATA}/assets/items/strange_flower.png`, count: 40 },
+  { icon: `${DATA}/assets/items/strange_pheromone.png`, count: 13 },
+]);
+// pokebola empilha infinito - mostra "inf" em vez de um numero, deixa
+// explicito que nao ha limite de estoque (diferente da mochila normal)
+renderItemGrid('pokebag-grid', [
+  { icon: `${DATA}/assets/topmenu/pokemon.png`, count: '∞' },
+  { icon: `${DATA}/assets/topmenu/pokemon.png`, count: '∞' },
+  { icon: `${DATA}/assets/topmenu/pokemon.png`, count: '∞' },
+]);
+
+// ---- engrenagem de configuracoes ----
+const gearBtn = document.getElementById('settings-gear');
+const settingsPanel = document.getElementById('panel-settings');
+gearBtn.addEventListener('click', () => {
+  settingsPanel.style.display = settingsPanel.style.display === 'none' ? 'block' : 'none';
+});
+document.getElementById('settings-close').addEventListener('click', e => {
+  e.stopPropagation();
+  settingsPanel.style.display = 'none';
+});
+
+const ZOOM_PRESETS = [
+  { label: '1.0x', value: 1.0 },
+  { label: '1.3x', value: 1.3 },
+  { label: '1.8x', value: 1.8 },
+];
+function renderZoomPresets() {
+  const el = document.getElementById('zoom-presets');
+  el.innerHTML = '';
+  for (const preset of ZOOM_PRESETS) {
+    const btn = document.createElement('button');
+    btn.textContent = preset.label;
+    const active = Math.abs(ZOOM - preset.value) < 0.001;
+    btn.style.cssText = `flex:1; padding:5px 0; font:bold 11px monospace; border-radius:4px; cursor:pointer; border:1px solid #555; background:${active ? '#e0a83a' : '#2a2a2a'}; color:${active ? '#000' : '#eee'};`;
+    btn.addEventListener('click', () => {
+      ZOOM = preset.value;
+      localStorage.setItem('settings:zoom', String(ZOOM));
+      renderZoomPresets();
+    });
+    el.appendChild(btn);
+  }
+}
+renderZoomPresets();
+
 // minimapa: escala a area da hunt (huntBounds) pro tamanho do canvas do
 // painel, plota jogador/Charmander/selvagens como pontinhos.
 function drawMinimap() {
   const canvas = document.getElementById('minimap-canvas');
-  if (!canvas || !state.player || !isFinite(huntBounds.minX)) return;
+  if (!canvas || !state.player || !state.charmander || !isFinite(huntBounds.minX)) return;
   const mctx = canvas.getContext('2d');
   mctx.fillStyle = '#0a2410';
   mctx.fillRect(0, 0, canvas.width, canvas.height);

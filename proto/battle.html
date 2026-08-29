@@ -32,6 +32,18 @@
   .panel-title:active { cursor: grabbing; }
   .panel-body { padding: 4px; }
   .panel.minimized .panel-body { display: none; }
+
+  /* grupo fixo: painel grudado a outros, nao arrasta individualmente (usa
+     dentro de .panel-stack em vez de solto na tela) */
+  .panel.fixed-in-stack { position: static; border-radius: 0; box-shadow: none; }
+  .panel.fixed-in-stack .panel-title { cursor: default; }
+  .panel-stack {
+    position: fixed;
+    display: flex; flex-direction: column;
+    border: 2px solid #444; border-radius: 6px; overflow: hidden;
+    z-index: 20; box-shadow: 0 2px 8px #0008;
+  }
+  .panel-stack .panel.fixed-in-stack + .panel.fixed-in-stack { border-top: 1px solid #444; }
   .panel-btn {
     background: #3a3a3a;
     border: 1px solid #555;
@@ -45,19 +57,89 @@
     border-radius: 3px;
   }
   .panel-btn:hover { background: #4a4a4a; }
+
+  .party-row {
+    display: flex; align-items: center; gap: 6px;
+    padding: 4px 6px; border-radius: 4px; cursor: pointer;
+    border: 1px solid transparent;
+  }
+  .party-row:hover { background: #2a2a2a; }
+  .party-row.active { border-color: #ffd24d; background: #332b12; }
+  .party-portrait {
+    width: 32px; height: 32px; border-radius: 50%;
+    background: #000; border: 2px solid #555;
+    display: flex; align-items: center; justify-content: center;
+    overflow: hidden; flex-shrink: 0;
+  }
+  .party-portrait img { width: 26px; height: 26px; object-fit: contain; image-rendering: pixelated; }
+  .party-info { flex: 1; min-width: 0; }
+  .party-name { font-size: 11px; font-weight: bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .party-hpbar { height: 5px; background: #400; border-radius: 3px; overflow: hidden; margin-top: 2px; }
+  .party-hpbar-fill { height: 100%; background: #3c3; }
+
+  .item-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 3px; }
+  .item-slot {
+    position: relative; width: 34px; height: 34px;
+    background: #111; border: 1px solid #444; border-radius: 4px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .item-slot img { width: 26px; height: 26px; object-fit: contain; image-rendering: pixelated; }
+  .item-count {
+    position: absolute; bottom: 1px; right: 2px;
+    font-size: 9px; font-weight: bold; color: #fff;
+    text-shadow: 1px 1px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000;
+  }
 </style>
 </head>
 <body>
 <canvas id="c" tabindex="0"></canvas>
 
-<div class="panel" id="panel-minimap" style="top:12px; right:12px; width:180px;">
+<button id="settings-gear" title="Configuracoes" style="position:fixed; bottom:12px; right:12px; width:34px; height:34px; border-radius:50%; background:#2a2a2ae6; border:2px solid #555; color:#eee; font-size:16px; cursor:pointer; z-index:21;">⚙</button>
+
+<div class="panel" id="panel-settings" style="bottom:54px; right:12px; width:260px; display:none;">
   <div class="panel-title" data-drag-handle>
-    <span>Minimapa</span>
-    <button class="panel-btn" data-minimize-btn title="Minimizar">-</button>
+    <span>Configuracoes</span>
+    <button class="panel-btn" id="settings-close" title="Fechar">x</button>
   </div>
   <div class="panel-body">
-    <canvas id="minimap-canvas" width="168" height="168" style="display:block; image-rendering: pixelated;"></canvas>
+    <div style="font-size:11px; font-weight:bold; margin-bottom:4px;">Zoom da camera</div>
+    <div id="zoom-presets" style="display:flex; gap:4px;"></div>
   </div>
+</div>
+
+<!-- grupo fixo (nao arrasta, nao separa) - minimapa+mochila+pokebag grudados -->
+<div class="panel-stack" style="top:12px; right:12px; width:180px;">
+  <div class="panel fixed-in-stack" id="panel-minimap">
+    <div class="panel-title">
+      <span>Minimapa</span>
+      <button class="panel-btn" data-minimize-btn title="Minimizar">-</button>
+    </div>
+    <div class="panel-body">
+      <canvas id="minimap-canvas" width="168" height="168" style="display:block; image-rendering: pixelated;"></canvas>
+    </div>
+  </div>
+  <div class="panel fixed-in-stack" id="panel-mochila">
+    <div class="panel-title">
+      <span>Mochila</span>
+      <button class="panel-btn" data-minimize-btn title="Minimizar">-</button>
+    </div>
+    <div class="panel-body item-grid" id="mochila-grid"></div>
+  </div>
+  <div class="panel fixed-in-stack" id="panel-pokebag">
+    <div class="panel-title">
+      <span>PokeBag</span>
+      <button class="panel-btn" data-minimize-btn title="Minimizar">-</button>
+    </div>
+    <div class="panel-body item-grid" id="pokebag-grid"></div>
+  </div>
+</div>
+
+<div class="panel fixed-in-stack" id="panel-party" style="position:fixed; top:12px; left:12px; width:180px; border-radius:6px;">
+  <div class="panel-title">
+    <span>Pokemons</span>
+    <button class="panel-btn" data-minimize-btn title="Minimizar">-</button>
+  </div>
+  <div class="panel-body" id="party-list"></div>
 </div>
 
 <script src="battle.js"></script>

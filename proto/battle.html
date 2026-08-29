@@ -58,47 +58,54 @@
   }
   .panel-btn:hover { background: #4a4a4a; }
 
-  /* cartao do treinador / Pokemon ativo, estilo azul (referencia do usuario) */
+  /* cartao do treinador / Pokemon ativo - tema azul unico, escala de raio
+     unica (10px cartao / 8px icone / 50% retrato), sem glow neon (isso e
+     "AI tell" - troquei por highlight interno sutil, mais discreto) */
   .trainer-card, .active-card {
-    display: flex; align-items: center; gap: 8px;
-    background: linear-gradient(180deg, #1c2a3d, #131d2b);
+    display: flex; align-items: center; gap: 10px;
+    background: linear-gradient(180deg, #1d2c40, #141f2f);
     border: 1px solid #2f4a6b;
-    border-radius: 8px;
-    padding: 6px 8px;
+    border-radius: 10px;
+    padding: 8px 10px;
+    box-shadow: inset 0 1px 0 #ffffff14;
   }
   .active-card { margin-top: 6px; }
   .card-portrait {
-    width: 40px; height: 40px; border-radius: 50%;
-    background: #0a1420; border: 2px solid #3ea6ff;
+    width: 42px; height: 42px; border-radius: 50%;
+    background: radial-gradient(circle at 35% 30%, #16273b, #0a1420);
+    border: 2px solid #3ea6ff;
     display: flex; align-items: center; justify-content: center;
     overflow: hidden; flex-shrink: 0;
-    box-shadow: 0 0 6px #3ea6ff88;
+    box-shadow: inset 0 1px 2px #ffffff2e, inset 0 -2px 4px #00000066;
   }
   .card-portrait img { width: 34px; height: 34px; object-fit: contain; image-rendering: pixelated; }
   .card-info { flex: 1; min-width: 0; }
-  .card-name-row { display: flex; align-items: center; gap: 5px; }
-  .card-name { font-size: 12px; font-weight: bold; color: #eaf4ff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .card-name-row { display: flex; align-items: center; gap: 6px; }
+  .card-name { font-size: 12px; font-weight: 700; color: #eaf4ff; letter-spacing: .2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .card-badge {
-    font-size: 9px; font-weight: bold; color: #0a1420;
-    background: #3ea6ff; border-radius: 3px; padding: 1px 4px;
+    font-size: 9px; font-weight: 700; color: #06121f;
+    background: #3ea6ff; border-radius: 4px; padding: 2px 5px;
+    letter-spacing: .3px;
   }
-  .card-sub { font-size: 9px; color: #7fa8cc; margin-top: 1px; }
-  .card-hpbar { height: 5px; background: #3a1010; border-radius: 3px; overflow: hidden; margin-top: 3px; }
-  .card-hpbar-fill { height: 100%; background: #3ecf5f; }
-  .card-hp-text { font-size: 9px; color: #cfe6ff; margin-top: 1px; }
-  .card-xpbar { height: 3px; background: #10202f; border-radius: 2px; overflow: hidden; margin-top: 3px; }
-  .card-xpbar-fill { height: 100%; background: #3ea6ff; }
-  .card-xp-text { font-size: 8px; color: #3ea6ff; margin-top: 1px; }
+  .card-sub { font-size: 9px; color: #6f92b8; margin-top: 2px; }
+  .card-hpbar { height: 6px; background: #1a0e0e; border-radius: 4px; overflow: hidden; margin-top: 5px; box-shadow: inset 0 1px 2px #00000066; }
+  .card-hpbar-fill { height: 100%; border-radius: 4px; background: linear-gradient(180deg, #5eeb85, #2fb855); transition: width .3s ease; }
+  .card-hp-text { font-size: 9px; color: #a9c4de; margin-top: 3px; font-variant-numeric: tabular-nums; }
+  .card-xpbar { height: 3px; background: #0c1622; border-radius: 3px; overflow: hidden; margin-top: 5px; }
+  .card-xpbar-fill { height: 100%; border-radius: 3px; background: linear-gradient(90deg, #3ea6ff, #6fc4ff); }
+  .card-xp-text { font-size: 8px; color: #4c8ec2; margin-top: 2px; letter-spacing: .3px; }
 
-  .party-switcher { display: flex; gap: 5px; margin-top: 8px; }
+  .party-switcher { display: flex; gap: 6px; margin-top: 8px; }
   .party-icon {
-    width: 34px; height: 34px; border-radius: 6px;
-    background: #131d2b; border: 2px solid #2f4a6b;
+    width: 34px; height: 34px; border-radius: 8px;
+    background: #141f2f; border: 2px solid #2f4a6b;
     display: flex; align-items: center; justify-content: center;
     cursor: pointer; overflow: hidden;
+    transition: transform .12s ease, border-color .12s ease, background .12s ease;
   }
-  .party-icon:hover { border-color: #5fb8ff; }
-  .party-icon.active { border-color: #3ea6ff; background: #1c3450; box-shadow: 0 0 6px #3ea6ffaa; }
+  .party-icon:hover { border-color: #5fb8ff; transform: translateY(-1px); }
+  .party-icon:active { transform: translateY(0) scale(.96); }
+  .party-icon.active { border-color: #3ea6ff; background: #1c3450; box-shadow: inset 0 1px 0 #ffffff2e; }
   .party-icon img { width: 26px; height: 26px; object-fit: contain; image-rendering: pixelated; }
 
   .item-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 3px; }
@@ -158,7 +165,7 @@
   </div>
 </div>
 
-<div class="panel fixed-in-stack" id="panel-party" style="position:fixed; top:12px; left:12px; width:180px; border-radius:6px;">
+<div class="panel fixed-in-stack" id="panel-party" style="position:fixed; top:12px; left:12px; width:200px; border-radius:6px;">
   <div class="panel-body" id="party-list"></div>
 </div>
 

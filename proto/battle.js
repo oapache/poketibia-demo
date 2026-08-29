@@ -239,12 +239,26 @@ const state = {
   wilds: [], // varios Oddish selvagens
   cam: { x: 0, y: 0 },
 };
-function nearestAliveWild(from) {
-  let best = null, bestD = Infinity;
+// IA de farm: nao escolhe so o mais perto, escolhe onde da mais XP por
+// esforco. Pontua cada selvagem vivo por XP*(1+quantos outros vivos tem por
+// perto) dividido pela distancia - premia ir pra um AGLOMERADO denso de
+// bichos (mais mortes em sequencia sem precisar viajar de novo) em vez de
+// so pegar o vizinho mais proximo isolado. Junto com o alvo TRAVADO
+// (lockedTarget), o efeito e: limpa um aglomerado inteiro, so ai escolhe o
+// proximo aglomerado - "sucessivamente" como pedido.
+const CLUSTER_RADIUS = 6;
+function bestHuntTarget(from) {
+  let best = null, bestScore = -Infinity;
   for (const w of state.wilds) {
     if (!w.alive) continue;
     const d = dist(from, w);
-    if (d < bestD) { bestD = d; best = w; }
+    let nearby = 0;
+    for (const o of state.wilds) {
+      if (o !== w && o.alive && dist(w, o) <= CLUSTER_RADIUS) nearby++;
+    }
+    const xp = w.data.experience || 1;
+    const score = (xp * (1 + nearby)) / (d + 1);
+    if (score > bestScore) { bestScore = score; best = w; }
   }
   return best;
 }
@@ -352,7 +366,7 @@ async function init() {
 // que nem cachorro doido" era isso zigzagueando entre alvos).
 function lockedTarget() {
   if (state.huntTarget && !state.huntTarget.alive) state.huntTarget = null;
-  if (!state.huntTarget) state.huntTarget = nearestAliveWild(state.player);
+  if (!state.huntTarget) state.huntTarget = bestHuntTarget(state.charmander);
   return state.huntTarget;
 }
 

@@ -387,15 +387,30 @@ function tick(ts) {
   // perseguindo) e agressivo e avanca pra brigar; todos os OUTROS (nao-alvo)
   // fogem quando o Charmander chega perto - um de cada vez apanha, o resto
   // se espalha. Longe de tudo, vagueia a esmo.
+  //
+  // HISTERESE (limiar de entrada != limiar de saida): e assim que jogo idle
+  // de verdade evita "ping-pong" - se entra e sai de "fugindo" no MESMO
+  // limiar de distancia (ex: sempre <=4), qualquer oscilacao natural da
+  // distancia (o proprio perseguidor tambem anda) faz o bicho trocar de
+  // decisao toda hora, ziguezagueando. Com banda de histerese (entra <=3,
+  // so sai >=6) o estado fica estavel enquanto a distancia oscila no meio.
+  const FLEE_ENTER = 3, FLEE_EXIT = 6;
   for (const w of state.wilds) {
-    if (!w.alive || isMoving(w, ts)) continue;
+    if (!w.alive) continue;
     const dToCharm = dist(w, state.charmander);
+    if (w !== target) {
+      if (w.fleeing && dToCharm >= FLEE_EXIT) w.fleeing = false;
+      else if (!w.fleeing && dToCharm <= FLEE_ENTER) w.fleeing = true;
+    } else {
+      w.fleeing = false;
+    }
+    if (isMoving(w, ts)) continue;
     if (w === target) {
       if (dToCharm > 1) {
         const step = stepToward(w, state.charmander);
         if (step) startMove(w, step.nx, step.ny, ts);
       }
-    } else if (dToCharm <= 4) {
+    } else if (w.fleeing) {
       const step = fleeStep(w, state.charmander);
       if (step) startMove(w, step.nx, step.ny, ts);
     } else if (Math.random() < 0.15) {
@@ -470,7 +485,7 @@ function drawFloatingTexts(originX, originY, now) {
 // ZOOM), centralizada embaixo. So o slot 0 (Fire Fang) e o que a IA de
 // combate realmente usa agora - os outros mostram "bloqueado" ate o nivel
 // de aprendizado (learnLevel), preparado pra quando tiver progressao de verdade.
-const SLOT = 46, GAP = 6;
+const SLOT = 30, GAP = 4;
 function drawHotbar(now) {
   const charm = state.charmander;
   if (!charm?.data) return;
@@ -498,12 +513,12 @@ function drawHotbar(now) {
     }
 
     if (locked) {
-      ctx.font = 'bold 11px monospace';
+      ctx.font = 'bold 8px monospace';
       ctx.textAlign = 'center';
       ctx.fillStyle = '#fff';
-      ctx.lineWidth = 3; ctx.strokeStyle = '#000';
-      ctx.strokeText(`Lv${atk.learnLevel}`, x + SLOT / 2, y + SLOT / 2 + 4);
-      ctx.fillText(`Lv${atk.learnLevel}`, x + SLOT / 2, y + SLOT / 2 + 4);
+      ctx.lineWidth = 2; ctx.strokeStyle = '#000';
+      ctx.strokeText(`Lv${atk.learnLevel}`, x + SLOT / 2, y + SLOT / 2 + 3);
+      ctx.fillText(`Lv${atk.learnLevel}`, x + SLOT / 2, y + SLOT / 2 + 3);
       ctx.textAlign = 'left';
     } else if (i === 0) {
       // unico poder realmente disparado pela IA de combate agora - mostra
@@ -513,13 +528,13 @@ function drawHotbar(now) {
         const frac = remain / atk.cooldownMs;
         ctx.fillStyle = 'rgba(0,0,0,0.6)';
         ctx.fillRect(x, y + SLOT * (1 - frac), SLOT, SLOT * frac);
-        ctx.font = 'bold 13px monospace';
+        ctx.font = 'bold 9px monospace';
         ctx.textAlign = 'center';
         ctx.fillStyle = '#fff';
-        ctx.lineWidth = 3; ctx.strokeStyle = '#000';
+        ctx.lineWidth = 2; ctx.strokeStyle = '#000';
         const secs = (remain / 1000).toFixed(1);
-        ctx.strokeText(secs, x + SLOT / 2, y + SLOT / 2 + 5);
-        ctx.fillText(secs, x + SLOT / 2, y + SLOT / 2 + 5);
+        ctx.strokeText(secs, x + SLOT / 2, y + SLOT / 2 + 3);
+        ctx.fillText(secs, x + SLOT / 2, y + SLOT / 2 + 3);
         ctx.textAlign = 'left';
       }
     }

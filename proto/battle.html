@@ -58,61 +58,90 @@
   }
   .panel-btn:hover { background: #4a4a4a; }
 
-  /* UM painel so (o usuario pediu explicitamente: nao pode ser varios
-     quadrados separados) - trainer + Pokemon ativo + seletor moram dentro
-     da MESMA caixa, separados por linha fina interna em vez de cada um ter
-     seu proprio fundo/borda/raio. */
+  /* ---- portado de landing-page/src/features/fidelize/FidelizePanel.css ----
+     (o usuario ja tinha esse design pronto/aprovado - trocamos o que
+     tinhamos feito do zero por isso, so adaptado pra DOM puro em vez de
+     React e sprites locais em vez de PokeAPI) */
   #party-box {
-    background: linear-gradient(180deg, #1d2c40, #141f2f);
-    border: 1px solid #2f4a6b;
-    border-radius: 10px;
-    box-shadow: inset 0 1px 0 #ffffff14;
+    --fz-panel: #07131c;
+    --fz-line: #1e4052;
+    --fz-cyan: #20d5e4;
+    --fz-text: #dce7eb;
+    --fz-muted: #8c9ca4;
+    --fz-green: #24d678;
+    position: relative;
+    width: 234px;
     overflow: hidden;
+    border: 1px solid #214355;
+    border-radius: 8px;
+    background-color: var(--fz-panel);
+    background-image:
+      linear-gradient(rgba(25, 61, 75, 0.1) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(25, 61, 75, 0.08) 1px, transparent 1px),
+      linear-gradient(135deg, rgba(21, 58, 73, 0.13) 25%, transparent 25%, transparent 50%, rgba(21, 58, 73, 0.13) 50%, rgba(21, 58, 73, 0.13) 75%, transparent 75%);
+    background-size: 8px 8px, 8px 8px, 10px 10px;
+    box-shadow: 0 0 0 1px rgba(0,0,0,.9), 0 16px 45px rgba(0,0,0,.58), inset 0 0 24px rgba(1,6,10,.72);
+    font-family: Tahoma, Verdana, sans-serif;
+    color: var(--fz-text);
   }
-  .trainer-card, .active-card {
-    display: flex; align-items: center; gap: 10px;
-    padding: 8px 10px;
+  #party-box::before, #party-box::after {
+    position: absolute; z-index: 4; width: 15px; height: 15px; content: ''; pointer-events: none;
   }
-  .active-card { border-top: 1px solid #2f4a6b55; }
-  .card-portrait {
-    width: 42px; height: 42px; border-radius: 50%;
-    background: radial-gradient(circle at 35% 30%, #16273b, #0a1420);
-    border: 2px solid #3ea6ff;
-    display: flex; align-items: center; justify-content: center;
-    overflow: hidden; flex-shrink: 0;
-    box-shadow: inset 0 1px 2px #ffffff2e, inset 0 -2px 4px #00000066;
-  }
-  .card-portrait img { width: 34px; height: 34px; object-fit: contain; image-rendering: pixelated; }
-  /* o outfit do Trainer (159) so tem pose de "arremessar pokebola" em toda
-     direcao/frame (nao existe pose parada) - fica parecendo que esta voando
-     num retrato estatico. Contra-rotaciona so esse retrato pra ficar em pe. */
-  .card-info { flex: 1; min-width: 0; }
-  .card-name-row { display: flex; align-items: center; gap: 6px; }
-  .card-name { font-size: 12px; font-weight: 700; color: #eaf4ff; letter-spacing: .2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .card-badge {
-    font-size: 9px; font-weight: 700; color: #06121f;
-    background: #3ea6ff; border-radius: 4px; padding: 2px 5px;
-    letter-spacing: .3px;
-  }
-  .card-sub { font-size: 9px; color: #6f92b8; margin-top: 2px; }
-  .card-hpbar { height: 6px; background: #1a0e0e; border-radius: 4px; overflow: hidden; margin-top: 5px; box-shadow: inset 0 1px 2px #00000066; }
-  .card-hpbar-fill { height: 100%; border-radius: 4px; background: linear-gradient(180deg, #5eeb85, #2fb855); transition: width .3s ease; }
-  .card-hp-text { font-size: 9px; color: #a9c4de; margin-top: 3px; font-variant-numeric: tabular-nums; }
-  .card-xpbar { height: 3px; background: #0c1622; border-radius: 3px; overflow: hidden; margin-top: 5px; }
-  .card-xpbar-fill { height: 100%; border-radius: 3px; background: linear-gradient(90deg, #3ea6ff, #6fc4ff); }
-  .card-xp-text { font-size: 8px; color: #4c8ec2; margin-top: 2px; letter-spacing: .3px; }
+  #party-box::before { top: 4px; left: 4px; border-top: 1px solid #236172; border-left: 1px solid #236172; border-radius: 4px 0 0; }
+  #party-box::after { right: 4px; bottom: 4px; border-right: 1px solid #236172; border-bottom: 1px solid #236172; border-radius: 0 0 4px; }
 
-  .party-switcher { display: flex; gap: 6px; padding: 8px 10px; border-top: 1px solid #2f4a6b55; }
-  .party-icon {
-    width: 34px; height: 34px; border-radius: 8px;
-    background: #141f2f; border: 2px solid #2f4a6b;
-    display: flex; align-items: center; justify-content: center;
-    cursor: pointer; overflow: hidden;
-    transition: transform .12s ease, border-color .12s ease, background .12s ease;
+  .fz-player-card, .fz-pokemon-card {
+    display: grid; grid-template-columns: 54px minmax(0,1fr);
+    align-items: center; gap: 8px; padding: 9px 9px 8px;
   }
-  .party-icon:hover { border-color: #5fb8ff; transform: translateY(-1px); }
-  .party-icon:active { transform: translateY(0) scale(.96); }
-  .party-icon.active { border-color: #3ea6ff; background: #1c3450; box-shadow: inset 0 1px 0 #ffffff2e; }
+  .fz-player-card { border-bottom: 1px solid var(--fz-line); }
+  .fz-pokemon-card { border-bottom: 1px solid rgba(30,64,82,.5); }
+  .fz-portrait, .fz-pokemon-portrait {
+    display: grid; place-items: center; overflow: hidden; border-radius: 50%;
+    background: radial-gradient(circle at 44% 42%, #123441, #051019 66%);
+    box-shadow: inset 0 0 0 1px rgba(0,0,0,.75);
+  }
+  .fz-portrait { width: 49px; height: 49px; border: 1px solid var(--fz-cyan); box-shadow: 0 0 0 2px rgba(9,38,48,.8), inset 0 0 0 1px rgba(0,0,0,.72); }
+  .fz-pokemon-portrait { width: 43px; height: 43px; margin-left: 5px; border: 1px solid #153f4b; box-shadow: inset 0 0 0 1px rgba(5,23,31,.75), 0 0 13px rgba(21,185,198,.08); }
+  .fz-player-name { display: block; margin-bottom: 2px; color: #dce8ed; font-size: 12px; font-weight: 800; letter-spacing: .08em; line-height: 1; }
+  .fz-player-meta { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; color: var(--fz-muted); font-size: 9px; line-height: 1; }
+  .fz-level-badge { display: inline-flex; align-items: center; height: 16px; overflow: hidden; border: 1px solid #0c7d8b; border-radius: 3px; background: #052733; color: #e4fcff; font-size: 10px; line-height: 1; }
+  .fz-level-badge b { padding: 2px 4px; color: var(--fz-cyan); font-weight: 800; }
+  .fz-level-badge span { padding: 2px 4px 2px 1px; }
+  .fz-stat-line { display: flex; align-items: baseline; justify-content: space-between; min-width: 0; margin-bottom: 3px; color: var(--fz-cyan); font-size: 10px; line-height: 1; }
+  .fz-stat-line b { color: var(--fz-text); font-size: 10px; font-weight: 700; }
+  .fz-progress { display: block; height: 7px; overflow: hidden; border: 1px solid #102b38; border-radius: 5px; background: #040b11; box-shadow: inset 0 0 4px rgba(0,0,0,.9); }
+  .fz-progress > span { display: block; height: 100%; min-width: 0; border-radius: inherit; background: var(--fz-cyan); box-shadow: 0 0 8px rgba(32,213,228,.3); transition: width 180ms ease; }
+  .fz-progress-hp > span { background: var(--fz-green); box-shadow: 0 0 8px rgba(36,214,120,.26); }
+  .fz-pokemon-title { display: flex; align-items: baseline; justify-content: space-between; gap: 6px; margin-bottom: 4px; line-height: 1; }
+  .fz-pokemon-title strong { overflow: hidden; color: #d8e4e8; font-size: 11px; font-weight: 800; text-overflow: ellipsis; white-space: nowrap; }
+  .fz-pokemon-title span { flex: 0 0 auto; color: #8e9da5; font-size: 9px; }
+  .fz-hp-line { margin-bottom: 4px; }
+  .fz-hp-line b { color: #d0dbe0; }
+  .fz-hp-line i { color: #536973; font-size: 9px; font-style: normal; }
+  .fz-xp-line { margin-top: 6px; margin-bottom: 3px; }
+
+  .fz-party { display: grid; grid-template-columns: repeat(6, 1fr); align-items: center; gap: 3px; padding: 6px 8px 7px; }
+  .fz-party-slot, .fz-party-empty { position: relative; display: grid; width: 32px; height: 33px; place-items: center; justify-self: center; border-radius: 5px; }
+  .fz-party-slot { padding: 0; border: 1px solid transparent; background: rgba(1,9,14,.42); cursor: pointer; transition: border-color 140ms ease, background-color 140ms ease, transform 140ms ease; }
+  .fz-party-slot:hover { transform: translateY(-1px); border-color: #2d8490; background: rgba(16,81,94,.25); }
+  .fz-party-slot.active { border-color: var(--fz-cyan); background: #0a3644; box-shadow: inset 0 0 0 1px rgba(46,223,234,.14), 0 0 9px rgba(32,213,228,.12); }
+  .fz-party-slot > span { position: absolute; right: 2px; bottom: 1px; color: #d8e6e9; font-size: 8px; font-weight: 800; line-height: 1; text-shadow: 0 1px 2px #000; }
+  .fz-party-empty { border: 1px dashed rgba(20,57,72,.48); background: rgba(2,11,17,.25); }
+  .fz-sprite { display: block; max-width: 100%; object-fit: contain; image-rendering: pixelated; filter: drop-shadow(0 2px 2px rgba(0,0,0,.65)); }
+  .fz-pokemon-portrait .fz-sprite { width: 38px; height: 38px; }
+  .fz-party-slot .fz-sprite { width: 28px; height: 28px; }
+
+  /* treinador em CSS puro (sem sprite de jogo) - resolve de vez o problema
+     do outfit 159 so ter pose de "arremessar pokebola" em toda direcao,
+     que ficava parecendo "voando" num retrato estatico pequeno */
+  .fz-trainer { position: relative; display: block; width: 31px; height: 38px; transform: translateY(2px); image-rendering: pixelated; }
+  .fz-trainer span { position: absolute; display: block; }
+  .fz-trainer-cap { top: 2px; left: 7px; width: 19px; height: 6px; background: #de3d4a; box-shadow: -3px 3px 0 #8e2038, 5px 4px 0 #a72337, 12px 5px 0 #741a31; }
+  .fz-trainer-hair { top: 8px; left: 7px; width: 18px; height: 11px; background: #3a1e2d; box-shadow: -3px 3px 0 #251822, 15px 3px 0 #251822, 4px 9px 0 #251822; }
+  .fz-trainer-face { top: 10px; left: 10px; width: 13px; height: 11px; background: #ffb483; box-shadow: 3px 4px 0 #df815f, 8px 8px 0 #bd604e; }
+  .fz-trainer-shirt { top: 21px; left: 7px; width: 20px; height: 12px; background: #e8edf1; box-shadow: -4px 3px 0 #bad2da, 17px 2px 0 #cae1e5, 3px 9px 0 #3174a2, 10px 9px 0 #2b5d95; }
+  .fz-trainer-shadow { top: 33px; left: 4px; width: 25px; height: 3px; background: rgba(0,0,0,.52); box-shadow: -3px 2px 0 rgba(0,0,0,.35), 5px 2px 0 rgba(0,0,0,.35); }
   .party-icon img { width: 26px; height: 26px; object-fit: contain; image-rendering: pixelated; }
 
   .item-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 3px; }

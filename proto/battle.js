@@ -823,70 +823,78 @@ async function setupParty() {
   setInterval(() => renderParty(partyActiveIdx), 300); // mantem HP do card ativo atualizado
 }
 let partyActiveIdx = 0;
+// portado de landing-page/src/features/fidelize/FidelizePanel.jsx - mesma
+// estrutura/CSS (prefixo fz-), so trocando PokeAPI/React por DOM puro e
+// sprites locais ja recortados. Treinador usa a mini-arte 100% CSS do
+// FidelizePanel (nao a sprite do outfit 159, que so tem pose de arremesso).
 function renderParty(activeIdx) {
   const listEl = document.getElementById('party-list');
   listEl.innerHTML = '';
-  // TUDO dentro de UMA caixa so (pedido explicito: nada de varios quadrados
-  // separados) - trainer, Pokemon ativo e seletor sao secoes internas com
-  // divisor fino, nao paineis independentes.
   const el = document.createElement('div');
   el.id = 'party-box';
   listEl.appendChild(el);
 
-  // cartao do treinador - sprite do PROPRIO personagem (nao um avatar generico)
-  if (state.player) {
-    const pImg = creatureSprite(state.player.spriteIdx, state.player.outfitId, 1, 3);
-    const trainerCard = document.createElement('div');
-    trainerCard.className = 'trainer-card';
-    trainerCard.innerHTML = `
-      <div class="card-portrait"><img src="${pImg.src}" class="trainer-portrait-img"></div>
-      <div class="card-info">
-        <div class="card-name-row">
-          <span class="card-name">${state.player.name}</span>
-          <span class="card-badge">LV 1</span>
-        </div>
-        <div class="card-sub">${MAP_SLUG.charAt(0).toUpperCase() + MAP_SLUG.slice(1)}</div>
-        <div class="card-xpbar"><div class="card-xpbar-fill" style="width:0%"></div></div>
-        <div class="card-xp-text">XP 0%</div>
-      </div>`;
-    el.appendChild(trainerCard);
-  }
+  const locationName = MAP_SLUG.charAt(0).toUpperCase() + MAP_SLUG.slice(1);
+  const playerCard = document.createElement('section');
+  playerCard.className = 'fz-player-card';
+  playerCard.innerHTML = `
+    <div class="fz-portrait">
+      <span class="fz-trainer" aria-hidden="true">
+        <span class="fz-trainer-cap"></span>
+        <span class="fz-trainer-hair"></span>
+        <span class="fz-trainer-face"></span>
+        <span class="fz-trainer-shirt"></span>
+        <span class="fz-trainer-shadow"></span>
+      </span>
+    </div>
+    <div>
+      <strong class="fz-player-name">${(state.player?.name || 'JOGADOR').toUpperCase()}</strong>
+      <div class="fz-player-meta">
+        <span class="fz-level-badge"><b>LV</b><span>1</span></span>
+        <span>${locationName}</span>
+      </div>
+      <div class="fz-stat-line"><span>XP</span><b>0%</b></div>
+      <span class="fz-progress"><span style="width:0%"></span></span>
+    </div>`;
+  el.appendChild(playerCard);
 
-  // cartao do Pokemon ativo
   const active = partyRoster[activeIdx];
   if (active && state.charmander) {
     active.hp = state.charmander.hp; active.maxHp = state.charmander.maxHp;
     const aImg = creatureSprite(active.spriteIdx, active.data.looktype, 1, 3);
-    const activeCard = document.createElement('div');
-    activeCard.className = 'active-card';
-    activeCard.innerHTML = `
-      <div class="card-portrait"><img src="${aImg.src}"></div>
-      <div class="card-info">
-        <div class="card-name-row">
-          <span class="card-name">${active.name}</span>
-          <span class="card-badge">Lv.1</span>
-        </div>
-        <div class="card-hpbar"><div class="card-hpbar-fill" style="width:${Math.max(0, active.hp / active.maxHp * 100)}%"></div></div>
-        <div class="card-hp-text">HP ${Math.max(0, Math.round(active.hp))} / ${active.maxHp}</div>
-        <div class="card-xpbar"><div class="card-xpbar-fill" style="width:0%"></div></div>
-        <div class="card-xp-text">XP 0%</div>
+    const pokemonCard = document.createElement('section');
+    pokemonCard.className = 'fz-pokemon-card';
+    const hpPct = Math.max(0, active.hp / active.maxHp * 100);
+    pokemonCard.innerHTML = `
+      <div class="fz-pokemon-portrait"><img class="fz-sprite" src="${aImg.src}"></div>
+      <div>
+        <div class="fz-pokemon-title"><strong>${active.name}</strong><span>Lv.1</span></div>
+        <div class="fz-stat-line fz-hp-line"><span>HP</span><b>${Math.max(0, Math.round(active.hp))} <i>/</i> ${active.maxHp}</b></div>
+        <span class="fz-progress fz-progress-hp"><span style="width:${hpPct}%"></span></span>
+        <div class="fz-stat-line fz-xp-line"><span>XP</span><b>0%</b></div>
+        <span class="fz-progress"><span style="width:0%"></span></span>
       </div>`;
-    el.appendChild(activeCard);
+    el.appendChild(pokemonCard);
   }
 
-  // seletor pra trocar de Pokemon ativo (azul quando selecionado)
-  const switcher = document.createElement('div');
-  switcher.className = 'party-switcher';
+  const partyRow = document.createElement('section');
+  partyRow.className = 'fz-party';
   partyRoster.forEach((p, i) => {
-    const icon = document.createElement('div');
-    icon.className = 'party-icon' + (i === activeIdx ? ' active' : '');
     const img = creatureSprite(p.spriteIdx, p.data.looktype, 1, 3);
-    icon.innerHTML = `<img src="${img.src}">`;
-    icon.title = p.name;
-    icon.addEventListener('click', () => switchActivePokemon(i));
-    switcher.appendChild(icon);
+    const slot = document.createElement('button');
+    slot.type = 'button';
+    slot.className = 'fz-party-slot' + (i === activeIdx ? ' active' : '');
+    slot.title = p.name;
+    slot.innerHTML = `<img class="fz-sprite" src="${img.src}"><span>${i + 1}</span>`;
+    slot.addEventListener('click', () => switchActivePokemon(i));
+    partyRow.appendChild(slot);
   });
-  el.appendChild(switcher);
+  for (let i = partyRoster.length; i < 6; i++) {
+    const empty = document.createElement('span');
+    empty.className = 'fz-party-empty';
+    partyRow.appendChild(empty);
+  }
+  el.appendChild(partyRow);
 }
 function switchActivePokemon(idx) {
   const p = partyRoster[idx];

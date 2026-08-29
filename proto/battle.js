@@ -48,6 +48,7 @@ function log(msg) {
 
 let mapData, tilesByKey = new Map(), collisionSet = new Set(), offsets = { disp: {} };
 let mapItemsIndex = {};
+let fallbackGroundId; // grama base repetida fora da area carregada (ver init())
 let flatSet = new Set(), topSet = new Set();
 function layerOf(id) {
   // objeto ALTO (>1 tile) nunca pode ser "flat" (sempre embaixo, sem sort) -
@@ -261,10 +262,16 @@ async function init() {
   topSet = new Set([...drawOrder.top, ...drawOrder.toppers]);
 
   const groundZ = map._meta.groundZ;
+  const groundCount = new Map();
   for (const [x, y, z, tileId, extras] of map.tiles) {
     if (z !== groundZ) continue;
     tilesByKey.set(key(x, y), { ground: tileId, extras: (extras || []).map(e => e[0]) });
+    groundCount.set(tileId, (groundCount.get(tileId) || 0) + 1);
   }
+  // ground tile mais comum do mapa (geralmente grama base) - usado como
+  // "preenchimento infinito" fora da area carregada, pra nunca aparecer
+  // vazio preto na borda (ver fallbackGroundId em draw()).
+  fallbackGroundId = [...groundCount.entries()].sort((a, b) => b[1] - a[1])[0]?.[0];
   // lista de tiles andaveis pra sortear spawn aleatorio (calculado 1x, reusado).
   // restrito a uma caixa em torno dos spawns ORIGINAIS do hunt-config (+
   // margem), nao o mapa inteiro - senao o sorteio manda bicho/jogador pra
@@ -479,10 +486,13 @@ function draw() {
     const originX = scaledW / 2 - state.cam.x * TILE;
     const originY = scaledH / 2 - state.cam.y * TILE;
 
+    // fora da area carregada preenche com grama generica (fallbackGroundId)
+    // em vez de deixar vazio - nunca mostra o "fim do mapa" (vazio preto),
+    // da impressao de mapa infinito continuando alem do que foi baixado.
     const visible = [];
     for (let y = startY; y <= startY + tilesY; y++)
       for (let x = startX; x <= startX + tilesX; x++) {
-        const t = tilesByKey.get(key(x, y));
+        const t = tilesByKey.get(key(x, y)) || (fallbackGroundId != null ? { ground: fallbackGroundId, extras: [] } : null);
         if (t) visible.push([x, y, t]);
       }
     visible.sort((a, b) => a[1] - b[1] || a[0] - b[0]);
@@ -497,6 +507,18 @@ function draw() {
       if (img?.complete && img.naturalWidth) {
         const [dx, dy] = offsets.disp?.[String(id)] || [0, 0];
         ctx.drawImage(img, px + dx, py + dy);
+      }
+    }
+    // chao usa "overdraw" (1px a mais em cada tile) pra esconder costura
+    // entre tiles vizinhas - aparece como listras finas por causa do ZOOM
+    // fracionario (1.3x) com nearest-neighbor, onde a escala do canvas nao
+    // cai certinho em pixel inteiro na tela. So o chao precisa disso (fecha
+    // lado a lado sem espaco); decoracao tem borda transparente, nao precisa.
+    function drawGround(id, px, py) {
+      const img = terrainSprite(id);
+      if (img?.complete && img.naturalWidth) {
+        const [dx, dy] = offsets.disp?.[String(id)] || [0, 0];
+        ctx.drawImage(img, px + dx, py + dy, img.naturalWidth + 1, img.naturalHeight + 1);
       }
     }
     function rowSpanOf(id) {
@@ -519,7 +541,7 @@ function draw() {
     // pra decoracao grande) so quando ha sprite >1 tile de altura por perto.
     const groundItems = visible.map(([x, y, t]) => ({
       y: depthKeyOf(t.ground, y),
-      draw: () => drawExtra(t.ground, Math.round(originX + x * TILE), Math.round(originY + y * TILE)),
+      draw: () => drawGround(t.ground, Math.round(originX + x * TILE), Math.round(originY + y * TILE)),
     }));
     groundItems.sort((a, b) => a.y - b.y);
     for (const g of groundItems) g.draw();

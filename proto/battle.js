@@ -17,8 +17,6 @@ const ZOOM = 1.3; // camera parecida com o client real (1.8 deixava personagem/P
 
 const canvas = document.getElementById('c');
 const ctx = canvas.getContext('2d');
-const info = document.getElementById('info');
-const logEl = document.getElementById('log');
 
 // canvas em resolucao nativa da tela (devicePixelRatio) pra nao ficar borrado
 // em monitor HiDPI/4K, com nearest-neighbor (sem smoothing) pra manter o
@@ -43,11 +41,9 @@ function popupText(worldX, worldY, text, color) {
   floatingTexts.push({ x: worldX, y: worldY, text, color, born: performance.now() });
 }
 
+// log e info ficam so no console (F12) - nao poluir a tela do jogo com texto
 function log(msg) {
-  const d = document.createElement('div');
-  d.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
-  logEl.prepend(d);
-  while (logEl.children.length > 30) logEl.removeChild(logEl.lastChild);
+  console.log(`[${new Date().toLocaleTimeString()}] ${msg}`);
 }
 
 let mapData, tilesByKey = new Map(), collisionSet = new Set(), offsets = { disp: {} };
@@ -72,6 +68,17 @@ function terrainSprite(tileId) {
   const e = mapItemsIndex[String(tileId)];
   if (!e?.files?.length) return null;
   return loadImage(`${SPRITES}/map-items/${e.files[0]}`);
+}
+// "elev" = mecanismo classico de escada/plataforma: um item elevado empurra
+// pra cima (na tela) tudo que fica em cima dele na mesma tile - inclusive
+// quem esta em pe ali. Sem isso, andar por cima de uma "escada" no dado do
+// jogo nao muda nada visualmente (achatado), só clareado sem sensacao de altura.
+function tileElevation(x, y) {
+  const t = tilesByKey.get(key(x, y));
+  if (!t) return 0;
+  let total = 0;
+  for (const id of [t.ground, ...t.extras]) total += (offsets.elev?.[String(id)] || 0);
+  return total;
 }
 function isBlocked(x, y) {
   const t = tilesByKey.get(key(x, y));
@@ -170,14 +177,24 @@ function stepToward(from, to, avoidKey) {
   return { nx: path[0].x, ny: path[0].y };
 }
 // passo pra LONGE de um perseguidor (foge) - mesma ideia do stepToward, so
-// que maximiza distancia em vez de minimizar.
+// que maximiza distancia em vez de minimizar. Evita voltar pra tile de onde
+// acabou de vir (senao entra num ping-pong A<->B infinito - o "dando ole").
 function fleeStep(from, from_threat) {
   let best = null, bestDist = -Infinity;
   for (const [dx, dy] of NEIGHBORS8) {
     const nx = from.gx + dx, ny = from.gy + dy;
+    if (nx === from.fromX && ny === from.fromY) continue;
     if (isBlocked(nx, ny)) continue;
     const d = Math.abs(from_threat.gx - nx) + Math.abs(from_threat.gy - ny);
     if (d > bestDist) { bestDist = d; best = { nx, ny }; }
+  }
+  if (!best) { // sem opcao alem de voltar - melhor voltar que travar parado
+    for (const [dx, dy] of NEIGHBORS8) {
+      const nx = from.gx + dx, ny = from.gy + dy;
+      if (isBlocked(nx, ny)) continue;
+      const d = Math.abs(from_threat.gx - nx) + Math.abs(from_threat.gy - ny);
+      if (d > bestDist) { bestDist = d; best = { nx, ny }; }
+    }
   }
   return best;
 }
@@ -383,7 +400,7 @@ function tick(ts) {
   }
 
   const aliveCount = state.wilds.filter(w => w.alive).length;
-  info.textContent = `jogador (${state.player.gx},${state.player.gy}) | Charmander HP ${state.charmander.hp}/${state.charmander.maxHp} | Oddish vivos: ${aliveCount}/${state.wilds.length}`;
+  state.debugInfo = `jogador (${state.player.gx},${state.player.gy}) | Charmander HP ${state.charmander.hp}/${state.charmander.maxHp} | Oddish vivos: ${aliveCount}/${state.wilds.length}`;
 }
 
 function drawNameTag(px, py, name, color, extraLift = 0) {
@@ -496,14 +513,17 @@ function draw() {
     // ordenamento por Y - senao entidade sempre desenha por cima de toda
     // decoracao, mesmo quando deveria passar "por tras" de uma arvore/arbusto
     // cuja linha esta mais a frente (y maior).
+    // "top"/"toppers" do draworder.json foram removidos do tratamento
+    // especial "sempre por cima" - pra arvore/objeto GRANDE isso fazia o
+    // personagem aparecer na frente de arvore que devia estar ocluindo ele.
+    // Agora TUDO que nao e "flat" entra no mesmo sort por linha-base, sem
+    // excecao - previsivel: na frente da arvore = arvore atras, atras da
+    // arvore = arvore na frente.
     const depthItems = [];
-    const topItems = [];
     for (const [x, y, t] of visible) {
       const px = Math.round(originX + x * TILE), py = Math.round(originY + y * TILE);
       for (const id of t.extras) {
-        const layer = layerOf(id);
-        if (layer === 'flat') continue; // ja desenhado acima
-        if (layer === 'top') { topItems.push(() => drawExtra(id, px, py)); continue; }
+        if (layerOf(id) === 'flat') continue; // ja desenhado acima
         // arvore grande = 1 sprite so ocupando varias linhas (ex: 64x64 = 2
         // tiles de altura), ancorado no topo-esquerda. Se ordenar so pela
         // linha da ancora, uma entidade na linha de baixo (onde a arvore
@@ -536,10 +556,11 @@ function draw() {
         continue;
       }
       const vis = visualPos(w, now);
+      const wElev = tileElevation(w.gx, w.gy);
       depthItems.push({
         y: vis.y, draw: () => {
           const img = creatureSprite(w.spriteIdx, w.data.looktype, walkFrame(w, now), w.dir);
-          const px = Math.round(originX + vis.x * TILE), py = Math.round(originY + vis.y * TILE);
+          const px = Math.round(originX + vis.x * TILE), py = Math.round(originY + vis.y * TILE) - wElev;
           if (img?.complete && img.naturalWidth) ctx.drawImage(img, px, py);
           drawHpBar(px, py, w.hp, w.maxHp);
           drawNameTag(px, py, 'Oddish', '#ff8a8a');
@@ -548,19 +569,21 @@ function draw() {
     }
     {
       const vis = visualPos(state.charmander, now);
+      const cElev = tileElevation(state.charmander.gx, state.charmander.gy);
       depthItems.push({
         y: vis.y, draw: () => {
           const img = creatureSprite(state.charmander.spriteIdx, state.charmander.data.looktype, walkFrame(state.charmander, now), state.charmander.dir);
-          const px = Math.round(originX + vis.x * TILE), py = Math.round(originY + vis.y * TILE);
+          const px = Math.round(originX + vis.x * TILE), py = Math.round(originY + vis.y * TILE) - cElev;
           if (img?.complete && img.naturalWidth) ctx.drawImage(img, px, py);
           drawHpBar(px, py, state.charmander.hp, state.charmander.maxHp);
           drawNameTag(px, py, 'Charmander', '#6f6', 12);
         }
       });
     }
+    const pElev = tileElevation(state.player.gx, state.player.gy);
     depthItems.push({
       y: playerVis.y, draw: () => {
-        const apx = Math.round(originX + playerVis.x * TILE), apy = Math.round(originY + playerVis.y * TILE);
+        const apx = Math.round(originX + playerVis.x * TILE), apy = Math.round(originY + playerVis.y * TILE) - pElev;
         const pImg = creatureSprite(state.player.spriteIdx, state.player.outfitId, walkFrame(state.player, now), state.player.dir);
         if (pImg?.complete && pImg.naturalWidth) ctx.drawImage(pImg, apx, apy);
         drawNameTag(apx, apy, state.player.name, '#fff');
@@ -568,7 +591,6 @@ function draw() {
     });
     depthItems.sort((a, b) => a.y - b.y);
     for (const item of depthItems) item.draw();
-    for (const draw of topItems) draw(); // sempre por cima, nunca ocluido
 
     drawFloatingTexts(originX, originY, now);
     ctx.restore();

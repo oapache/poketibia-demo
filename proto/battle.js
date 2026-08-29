@@ -13,7 +13,7 @@ const DATA = `${BASE}/downloaded`;
 const MAP_SLUG = 'oddish'; // mapa que ja tem hunt-config com spawn de Oddish
 const PLAYER_MOVE_DUR = 500; // ms por passo do jogador (mais devagar)
 const CREATURE_MOVE_DUR = 480; // ms por passo de Pokemon (Charmander/selvagens)
-const ZOOM = 1.8; // camera mais proxima, parecido com o client real
+const ZOOM = 1.3; // camera parecida com o client real (1.8 deixava personagem/Pokemon grande demais)
 
 const canvas = document.getElementById('c');
 const ctx = canvas.getContext('2d');
@@ -221,10 +221,22 @@ async function init() {
     if (z !== groundZ) continue;
     tilesByKey.set(key(x, y), { ground: tileId, extras: (extras || []).map(e => e[0]) });
   }
-  // lista de tiles andaveis pra sortear spawn aleatorio (calculado 1x, reusado)
+  // lista de tiles andaveis pra sortear spawn aleatorio (calculado 1x, reusado).
+  // restrito a uma caixa em torno dos spawns ORIGINAIS do hunt-config (+
+  // margem), nao o mapa inteiro - senao o sorteio manda bicho/jogador pra
+  // beirada do mapa carregado, onde da pra ver o "fim do mundo" (vazio preto
+  // além da area de tiles que a hunt realmente usa).
+  const HUNT_MARGIN = 12;
+  let boundsMinX = -Infinity, boundsMaxX = Infinity, boundsMinY = -Infinity, boundsMaxY = Infinity;
+  if (huntConfig?.spawns?.length) {
+    const xs = huntConfig.spawns.map(s => s.x), ys = huntConfig.spawns.map(s => s.y);
+    boundsMinX = Math.min(...xs) - HUNT_MARGIN; boundsMaxX = Math.max(...xs) + HUNT_MARGIN;
+    boundsMinY = Math.min(...ys) - HUNT_MARGIN; boundsMaxY = Math.max(...ys) + HUNT_MARGIN;
+  }
   const walkableTiles = [];
   for (const [k] of tilesByKey) {
     const [x, y] = k.split(',').map(Number);
+    if (x < boundsMinX || x > boundsMaxX || y < boundsMinY || y > boundsMaxY) continue;
     if (!isBlocked(x, y)) walkableTiles.push({ x, y });
   }
   function randomWalkableTile() {
@@ -414,14 +426,6 @@ function draw() {
     // 3) "sorted" (bottom normal) + entidades - competem no MESMO y-sort
     // 4) "top"/"toppers" - sempre por cima de tudo (copa de arvore, teto),
     //    nunca ocluido por criatura passando por baixo
-    for (const [x, y, t] of visible) {
-      const px = Math.round(originX + x * TILE), py = Math.round(originY + y * TILE);
-      const img = terrainSprite(t.ground);
-      if (img?.complete && img.naturalWidth) {
-        const [dx, dy] = offsets.disp?.[String(t.ground)] || [0, 0];
-        ctx.drawImage(img, px + dx, py + dy);
-      }
-    }
     function drawExtra(id, px, py) {
       const img = terrainSprite(id);
       if (img?.complete && img.naturalWidth) {
@@ -429,6 +433,20 @@ function draw() {
         ctx.drawImage(img, px + dx, py + dy);
       }
     }
+    function rowSpanOf(id) {
+      const entry = mapItemsIndex[String(id)];
+      return Math.max(1, Math.round((entry?.height || TILE) / TILE));
+    }
+    // a maioria do chao e 32x32 (ordem entre eles nao importa), mas ~28
+    // tiles de agua/borda sao 64x64 - se desenhados em qualquer ordem podem
+    // cortar o chao vizinho. Ordena pela linha da BASE (mesmo truque usado
+    // pra decoracao grande) so quando ha sprite >1 tile de altura por perto.
+    const groundItems = visible.map(([x, y, t]) => ({
+      y: y + rowSpanOf(t.ground) - 1,
+      draw: () => drawExtra(t.ground, Math.round(originX + x * TILE), Math.round(originY + y * TILE)),
+    }));
+    groundItems.sort((a, b) => a.y - b.y);
+    for (const g of groundItems) g.draw();
     for (const [x, y, t] of visible) {
       const px = Math.round(originX + x * TILE), py = Math.round(originY + y * TILE);
       for (const id of t.extras) if (layerOf(id) === 'flat') drawExtra(id, px, py);
@@ -449,9 +467,7 @@ function draw() {
         // tiles de altura), ancorado no topo-esquerda. Se ordenar so pela
         // linha da ancora, uma entidade na linha de baixo (onde a arvore
         // "termina" visualmente) fica errada. Usa a linha da BASE do sprite.
-        const entry = mapItemsIndex[String(id)];
-        const rowSpan = Math.max(1, Math.round((entry?.height || TILE) / TILE));
-        depthItems.push({ y: y + rowSpan - 1, draw: () => drawExtra(id, px, py) });
+        depthItems.push({ y: y + rowSpanOf(id) - 1, draw: () => drawExtra(id, px, py) });
       }
     }
     const FAINT_DUR = 5000; // combina com o setTimeout do respawn

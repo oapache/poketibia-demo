@@ -837,15 +837,10 @@ function renderParty(activeIdx) {
   const locationName = MAP_SLUG.charAt(0).toUpperCase() + MAP_SLUG.slice(1);
   const playerCard = document.createElement('section');
   playerCard.className = 'fz-player-card';
+  const pImg = state.player ? creatureSprite(state.player.spriteIdx, state.player.outfitId, 1, 3) : null;
   playerCard.innerHTML = `
     <div class="fz-portrait">
-      <span class="fz-trainer" aria-hidden="true">
-        <span class="fz-trainer-cap"></span>
-        <span class="fz-trainer-hair"></span>
-        <span class="fz-trainer-face"></span>
-        <span class="fz-trainer-shirt"></span>
-        <span class="fz-trainer-shadow"></span>
-      </span>
+      ${pImg ? `<img class="fz-sprite" src="${pImg.src}">` : ''}
     </div>
     <div>
       <strong class="fz-player-name">${(state.player?.name || 'JOGADOR').toUpperCase()}</strong>

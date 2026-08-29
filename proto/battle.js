@@ -817,27 +817,70 @@ async function setupParty() {
     const spriteIdx = await loadCreatureIndex(data.looktype);
     partyRoster.push({ name, data, spriteIdx, hp: data.baseHp, maxHp: data.baseHp });
   }
-  const activeIdx = partyRoster.findIndex(p => p.name === 'Charmander');
-  renderParty(activeIdx >= 0 ? activeIdx : 0);
+  partyActiveIdx = partyRoster.findIndex(p => p.name === 'Charmander');
+  if (partyActiveIdx < 0) partyActiveIdx = 0;
+  renderParty(partyActiveIdx);
+  setInterval(() => renderParty(partyActiveIdx), 300); // mantem HP do card ativo atualizado
 }
+let partyActiveIdx = 0;
 function renderParty(activeIdx) {
   const el = document.getElementById('party-list');
   el.innerHTML = '';
-  partyRoster.forEach((p, i) => {
-    const isActive = i === activeIdx;
-    if (isActive) { p.hp = state.charmander.hp; p.maxHp = state.charmander.maxHp; }
-    const row = document.createElement('div');
-    row.className = 'party-row' + (isActive ? ' active' : '');
-    const img = creatureSprite(p.spriteIdx, p.data.looktype, 1, 3);
-    row.innerHTML = `
-      <div class="party-portrait"><img src="${img.src}"></div>
-      <div class="party-info">
-        <div class="party-name">${p.name}</div>
-        <div class="party-hpbar"><div class="party-hpbar-fill" style="width:${Math.max(0, p.hp / p.maxHp * 100)}%"></div></div>
+
+  // cartao do treinador - sprite do PROPRIO personagem (nao um avatar generico)
+  if (state.player) {
+    const pImg = creatureSprite(state.player.spriteIdx, state.player.outfitId, 1, 3);
+    const trainerCard = document.createElement('div');
+    trainerCard.className = 'trainer-card';
+    trainerCard.innerHTML = `
+      <div class="card-portrait"><img src="${pImg.src}"></div>
+      <div class="card-info">
+        <div class="card-name-row">
+          <span class="card-name">${state.player.name}</span>
+          <span class="card-badge">LV 1</span>
+        </div>
+        <div class="card-sub">${MAP_SLUG.charAt(0).toUpperCase() + MAP_SLUG.slice(1)}</div>
+        <div class="card-xpbar"><div class="card-xpbar-fill" style="width:0%"></div></div>
+        <div class="card-xp-text">XP 0%</div>
       </div>`;
-    row.addEventListener('click', () => switchActivePokemon(i));
-    el.appendChild(row);
+    el.appendChild(trainerCard);
+  }
+
+  // cartao do Pokemon ativo
+  const active = partyRoster[activeIdx];
+  if (active && state.charmander) {
+    active.hp = state.charmander.hp; active.maxHp = state.charmander.maxHp;
+    const aImg = creatureSprite(active.spriteIdx, active.data.looktype, 1, 3);
+    const activeCard = document.createElement('div');
+    activeCard.className = 'active-card';
+    activeCard.innerHTML = `
+      <div class="card-portrait"><img src="${aImg.src}"></div>
+      <div class="card-info">
+        <div class="card-name-row">
+          <span class="card-name">${active.name}</span>
+          <span class="card-badge">Lv.1</span>
+        </div>
+        <div class="card-hpbar"><div class="card-hpbar-fill" style="width:${Math.max(0, active.hp / active.maxHp * 100)}%"></div></div>
+        <div class="card-hp-text">HP ${Math.max(0, Math.round(active.hp))} / ${active.maxHp}</div>
+        <div class="card-xpbar"><div class="card-xpbar-fill" style="width:0%"></div></div>
+        <div class="card-xp-text">XP 0%</div>
+      </div>`;
+    el.appendChild(activeCard);
+  }
+
+  // seletor pra trocar de Pokemon ativo (azul quando selecionado)
+  const switcher = document.createElement('div');
+  switcher.className = 'party-switcher';
+  partyRoster.forEach((p, i) => {
+    const icon = document.createElement('div');
+    icon.className = 'party-icon' + (i === activeIdx ? ' active' : '');
+    const img = creatureSprite(p.spriteIdx, p.data.looktype, 1, 3);
+    icon.innerHTML = `<img src="${img.src}">`;
+    icon.title = p.name;
+    icon.addEventListener('click', () => switchActivePokemon(i));
+    switcher.appendChild(icon);
   });
+  el.appendChild(switcher);
 }
 function switchActivePokemon(idx) {
   const p = partyRoster[idx];
@@ -848,6 +891,7 @@ function switchActivePokemon(idx) {
   Object.assign(state.charmander, {
     data: p.data, spriteIdx: p.spriteIdx, hp: p.hp, maxHp: p.maxHp, level: 1, lastAttack: 0,
   });
+  partyActiveIdx = idx;
   renderParty(idx);
 }
 setupParty();

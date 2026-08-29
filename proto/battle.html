@@ -58,24 +58,48 @@
   }
   .panel-btn:hover { background: #4a4a4a; }
 
-  .party-row {
-    display: flex; align-items: center; gap: 6px;
-    padding: 4px 6px; border-radius: 4px; cursor: pointer;
-    border: 1px solid transparent;
+  /* cartao do treinador / Pokemon ativo, estilo azul (referencia do usuario) */
+  .trainer-card, .active-card {
+    display: flex; align-items: center; gap: 8px;
+    background: linear-gradient(180deg, #1c2a3d, #131d2b);
+    border: 1px solid #2f4a6b;
+    border-radius: 8px;
+    padding: 6px 8px;
   }
-  .party-row:hover { background: #2a2a2a; }
-  .party-row.active { border-color: #ffd24d; background: #332b12; }
-  .party-portrait {
-    width: 32px; height: 32px; border-radius: 50%;
-    background: #000; border: 2px solid #555;
+  .active-card { margin-top: 6px; }
+  .card-portrait {
+    width: 40px; height: 40px; border-radius: 50%;
+    background: #0a1420; border: 2px solid #3ea6ff;
     display: flex; align-items: center; justify-content: center;
     overflow: hidden; flex-shrink: 0;
+    box-shadow: 0 0 6px #3ea6ff88;
   }
-  .party-portrait img { width: 26px; height: 26px; object-fit: contain; image-rendering: pixelated; }
-  .party-info { flex: 1; min-width: 0; }
-  .party-name { font-size: 11px; font-weight: bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .party-hpbar { height: 5px; background: #400; border-radius: 3px; overflow: hidden; margin-top: 2px; }
-  .party-hpbar-fill { height: 100%; background: #3c3; }
+  .card-portrait img { width: 34px; height: 34px; object-fit: contain; image-rendering: pixelated; }
+  .card-info { flex: 1; min-width: 0; }
+  .card-name-row { display: flex; align-items: center; gap: 5px; }
+  .card-name { font-size: 12px; font-weight: bold; color: #eaf4ff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .card-badge {
+    font-size: 9px; font-weight: bold; color: #0a1420;
+    background: #3ea6ff; border-radius: 3px; padding: 1px 4px;
+  }
+  .card-sub { font-size: 9px; color: #7fa8cc; margin-top: 1px; }
+  .card-hpbar { height: 5px; background: #3a1010; border-radius: 3px; overflow: hidden; margin-top: 3px; }
+  .card-hpbar-fill { height: 100%; background: #3ecf5f; }
+  .card-hp-text { font-size: 9px; color: #cfe6ff; margin-top: 1px; }
+  .card-xpbar { height: 3px; background: #10202f; border-radius: 2px; overflow: hidden; margin-top: 3px; }
+  .card-xpbar-fill { height: 100%; background: #3ea6ff; }
+  .card-xp-text { font-size: 8px; color: #3ea6ff; margin-top: 1px; }
+
+  .party-switcher { display: flex; gap: 5px; margin-top: 8px; }
+  .party-icon {
+    width: 34px; height: 34px; border-radius: 6px;
+    background: #131d2b; border: 2px solid #2f4a6b;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; overflow: hidden;
+  }
+  .party-icon:hover { border-color: #5fb8ff; }
+  .party-icon.active { border-color: #3ea6ff; background: #1c3450; box-shadow: 0 0 6px #3ea6ffaa; }
+  .party-icon img { width: 26px; height: 26px; object-fit: contain; image-rendering: pixelated; }
 
   .item-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 3px; }
   .item-slot {
@@ -137,7 +161,6 @@
 <div class="panel fixed-in-stack" id="panel-party" style="position:fixed; top:12px; left:12px; width:180px; border-radius:6px;">
   <div class="panel-title">
     <span>Pokemons</span>
-    <button class="panel-btn" data-minimize-btn title="Minimizar">-</button>
   </div>
   <div class="panel-body" id="party-list"></div>
 </div>

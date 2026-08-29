@@ -824,8 +824,14 @@ async function setupParty() {
 }
 let partyActiveIdx = 0;
 function renderParty(activeIdx) {
-  const el = document.getElementById('party-list');
-  el.innerHTML = '';
+  const listEl = document.getElementById('party-list');
+  listEl.innerHTML = '';
+  // TUDO dentro de UMA caixa so (pedido explicito: nada de varios quadrados
+  // separados) - trainer, Pokemon ativo e seletor sao secoes internas com
+  // divisor fino, nao paineis independentes.
+  const el = document.createElement('div');
+  el.id = 'party-box';
+  listEl.appendChild(el);
 
   // cartao do treinador - sprite do PROPRIO personagem (nao um avatar generico)
   if (state.player) {
@@ -833,7 +839,7 @@ function renderParty(activeIdx) {
     const trainerCard = document.createElement('div');
     trainerCard.className = 'trainer-card';
     trainerCard.innerHTML = `
-      <div class="card-portrait"><img src="${pImg.src}"></div>
+      <div class="card-portrait"><img src="${pImg.src}" class="trainer-portrait-img"></div>
       <div class="card-info">
         <div class="card-name-row">
           <span class="card-name">${state.player.name}</span>
